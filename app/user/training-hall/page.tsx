@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { auth } from '../../services/auth';
 import { createBooking } from '../../services/bookings';
 
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+
 export default function TrainingHallPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);

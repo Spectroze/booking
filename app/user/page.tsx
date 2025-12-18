@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { auth } from '../services/auth';
 import { useEffect } from 'react';
 
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+
 export default function UserPage() {
   const [selectedType, setSelectedType] = useState<'dome-tent' | 'training-hall' | null>(null);
   const router = useRouter();

@@ -5,6 +5,9 @@ import { Booking, subscribeToBookings, updateBookingStatus } from '../services/b
 import { auth } from '../services/auth';
 import { useRouter } from 'next/navigation';
 
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+
 export default function AdminPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
