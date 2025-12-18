@@ -224,21 +224,21 @@ export default function AdminPage() {
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-2 sm:p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6 flex justify-between items-center">
+        <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
               {viewMode === 'calendar' ? 'Booking Calendar' : 'Booking History'}
             </h1>
             {viewMode === 'calendar' && (
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
                 {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
               </p>
             )}
             {viewMode === 'history' && (
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
                 All accepted and rejected bookings
               </p>
             )}
@@ -246,7 +246,7 @@ export default function AdminPage() {
           <div className="flex gap-2">
             <button
               onClick={() => setViewMode('calendar')}
-              className={`px-4 py-2 rounded-lg transition-colors font-medium ${
+              className={`px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg transition-colors font-medium ${
                 viewMode === 'calendar'
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
@@ -256,7 +256,7 @@ export default function AdminPage() {
             </button>
             <button
               onClick={() => setViewMode('history')}
-              className={`px-4 py-2 rounded-lg transition-colors font-medium ${
+              className={`px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg transition-colors font-medium ${
                 viewMode === 'history'
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
@@ -269,32 +269,35 @@ export default function AdminPage() {
 
         {/* Calendar View */}
         {viewMode === 'calendar' && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 sm:p-6">
           {/* Calendar Navigation */}
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
             <button
               onClick={() => navigateMonth('prev')}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="px-2 sm:px-4 py-2 text-xs sm:text-base text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
-              ← Previous
+              <span className="hidden sm:inline">← Previous</span>
+              <span className="sm:hidden">←</span>
             </button>
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white text-center">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </h2>
             <button
               onClick={() => navigateMonth('next')}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="px-2 sm:px-4 py-2 text-xs sm:text-base text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
-              Next →
+              <span className="hidden sm:inline">Next →</span>
+              <span className="sm:hidden">→</span>
             </button>
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {/* Day Headers */}
             {dayNames.map(day => (
-              <div key={day} className="text-center font-semibold text-gray-700 dark:text-gray-300 py-2">
-                {day}
+              <div key={day} className="text-center font-semibold text-gray-700 dark:text-gray-300 py-1 sm:py-2 text-xs sm:text-sm">
+                <span className="hidden sm:inline">{day}</span>
+                <span className="sm:hidden">{day.substring(0, 1)}</span>
               </div>
             ))}
 
@@ -307,7 +310,7 @@ export default function AdminPage() {
               return (
                 <div
                   key={index}
-                  className={`min-h-[100px] border rounded-lg p-2 ${
+                  className={`min-h-[60px] sm:min-h-[100px] border rounded-lg p-1 sm:p-2 ${
                     day
                       ? isToday
                         ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700'
@@ -319,7 +322,7 @@ export default function AdminPage() {
                 >
                   {day && (
                     <>
-                      <div className={`text-sm font-medium mb-1 ${
+                      <div className={`text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 ${
                         isToday
                           ? 'text-blue-700 dark:text-blue-300'
                           : isPast
@@ -328,20 +331,21 @@ export default function AdminPage() {
                       }`}>
                         {day.getDate()}
                       </div>
-                      <div className="space-y-1">
-                        {dayBookings.slice(0, 2).map(booking => (
+                      <div className="space-y-0.5 sm:space-y-1">
+                        {dayBookings.slice(0, 1).map(booking => (
                           <div
                             key={booking.id}
                             onClick={() => openBookingModal(booking)}
-                            className={`text-xs ${getStatusColor(booking.status)} text-white px-2 py-1 rounded truncate cursor-pointer hover:opacity-80`}
+                            className={`text-[10px] sm:text-xs ${getStatusColor(booking.status)} text-white px-1 sm:px-2 py-0.5 sm:py-1 rounded truncate cursor-pointer hover:opacity-80`}
                             title={`${booking.startTime} - ${booking.endTime}: ${booking.eventTitle || booking.type}`}
                           >
-                            {booking.startTime} - {booking.eventTitle || booking.type}
+                            <span className="hidden sm:inline">{booking.startTime} - {booking.eventTitle || booking.type}</span>
+                            <span className="sm:hidden">{booking.startTime}</span>
                           </div>
                         ))}
-                        {dayBookings.length > 2 && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 px-2">
-                            +{dayBookings.length - 2} more
+                        {dayBookings.length > 1 && (
+                          <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 px-1 sm:px-2">
+                            +{dayBookings.length - 1} more
                           </div>
                         )}
                       </div>
@@ -356,72 +360,131 @@ export default function AdminPage() {
 
         {/* History View */}
         {viewMode === 'history' && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 sm:p-6">
             {historyBookings.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 dark:text-gray-400 text-lg">
+                <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg">
                   No booking history found. Accepted and rejected bookings will appear here.
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Date</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Time</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Venue</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Event Title</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Contact Person</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Status</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {historyBookings.map((booking) => (
-                      <tr
-                        key={booking.id}
-                        className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                      >
-                        <td className="py-3 px-4 text-gray-900 dark:text-white">
-                          {new Date(booking.date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </td>
-                        <td className="py-3 px-4 text-gray-900 dark:text-white">
-                          {booking.startTime} - {booking.endTime}
-                        </td>
-                        <td className="py-3 px-4 text-gray-900 dark:text-white capitalize">
-                          {booking.type === 'dome-tent' ? 'Dome Tent' : 'Training Hall'}
-                        </td>
-                        <td className="py-3 px-4 text-gray-900 dark:text-white">
-                          {booking.eventTitle || 'N/A'}
-                        </td>
-                        <td className="py-3 px-4 text-gray-900 dark:text-white">
-                          {booking.contactPerson || 'N/A'}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(booking.status)} text-white`}
-                          >
-                            {getStatusText(booking.status)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={() => openBookingModal(booking)}
-                            className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium"
-                          >
-                            View Details
-                          </button>
-                        </td>
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Date</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Time</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Venue</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Event Title</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Contact Person</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {historyBookings.map((booking) => (
+                        <tr
+                          key={booking.id}
+                          className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                          <td className="py-3 px-4 text-gray-900 dark:text-white">
+                            {new Date(booking.date).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </td>
+                          <td className="py-3 px-4 text-gray-900 dark:text-white">
+                            {booking.startTime} - {booking.endTime}
+                          </td>
+                          <td className="py-3 px-4 text-gray-900 dark:text-white capitalize">
+                            {booking.type === 'dome-tent' ? 'Dome Tent' : 'Training Hall'}
+                          </td>
+                          <td className="py-3 px-4 text-gray-900 dark:text-white">
+                            {booking.eventTitle || 'N/A'}
+                          </td>
+                          <td className="py-3 px-4 text-gray-900 dark:text-white">
+                            {booking.contactPerson || 'N/A'}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(booking.status)} text-white`}
+                            >
+                              {getStatusText(booking.status)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <button
+                              onClick={() => openBookingModal(booking)}
+                              className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium"
+                            >
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                  {historyBookings.map((booking) => (
+                    <div
+                      key={booking.id}
+                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/50"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {new Date(booking.date).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                            {booking.startTime} - {booking.endTime}
+                          </p>
+                        </div>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(booking.status)} text-white`}
+                        >
+                          {getStatusText(booking.status)}
+                        </span>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div>
+                          <span className="text-gray-600 dark:text-gray-400">Venue: </span>
+                          <span className="text-gray-900 dark:text-white capitalize">
+                            {booking.type === 'dome-tent' ? 'Dome Tent' : 'Training Hall'}
+                          </span>
+                        </div>
+                        {booking.eventTitle && (
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-400">Event: </span>
+                            <span className="text-gray-900 dark:text-white">{booking.eventTitle}</span>
+                          </div>
+                        )}
+                        {booking.contactPerson && (
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-400">Contact: </span>
+                            <span className="text-gray-900 dark:text-white">{booking.contactPerson}</span>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => openBookingModal(booking)}
+                        className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
@@ -429,13 +492,13 @@ export default function AdminPage() {
 
       {/* Booking Details Modal */}
       {showModal && selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full p-6 my-8 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full p-4 sm:p-6 my-4 sm:my-8 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-4">
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                 Booking Details
               </h3>
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(selectedBooking.status)} text-white`}>
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(selectedBooking.status)} text-white self-start sm:self-auto`}>
                 {getStatusText(selectedBooking.status)}
               </span>
             </div>
@@ -683,22 +746,22 @@ export default function AdminPage() {
 
               {/* Action Buttons */}
               {selectedBooking.status === 'pending' && (
-                <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={handleAcceptBooking}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm sm:text-base"
                   >
                     Accept Booking
                   </button>
                   <button
                     onClick={handleRejectBooking}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm sm:text-base"
                   >
                     Reject Booking
                   </button>
                   <button
                     onClick={closeModal}
-                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
+                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors text-sm sm:text-base"
                   >
                     Close
                   </button>
@@ -706,10 +769,10 @@ export default function AdminPage() {
               )}
 
               {selectedBooking.status !== 'pending' && (
-                <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex gap-2 sm:gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={closeModal}
-                    className="flex-1 px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
+                    className="flex-1 px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors text-sm sm:text-base"
                   >
                     Close
                   </button>
@@ -723,20 +786,20 @@ export default function AdminPage() {
       {/* Status Modal (Success/Error) */}
       {showStatusModal && statusModalData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="flex items-start gap-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6">
+            <div className="flex items-start gap-3 sm:gap-4">
               {/* Icon */}
-              <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+              <div className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center ${
                 statusModalData.type === 'success'
                   ? 'bg-green-100 dark:bg-green-900/30'
                   : 'bg-red-100 dark:bg-red-900/30'
               }`}>
                 {statusModalData.type === 'success' ? (
-                  <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 ) : (
-                  <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 )}
@@ -744,19 +807,19 @@ export default function AdminPage() {
               
               {/* Content */}
               <div className="flex-1">
-                <h3 className={`text-xl font-bold mb-2 ${
+                <h3 className={`text-lg sm:text-xl font-bold mb-2 ${
                   statusModalData.type === 'success'
                     ? 'text-green-900 dark:text-green-100'
                     : 'text-red-900 dark:text-red-100'
                 }`}>
                   {statusModalData.title}
                 </h3>
-                <p className="text-gray-700 dark:text-gray-300 mb-4">
+                <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4">
                   {statusModalData.message}
                 </p>
                 <button
                   onClick={closeStatusModal}
-                  className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${
+                  className={`w-full px-4 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                     statusModalData.type === 'success'
                       ? 'bg-green-600 text-white hover:bg-green-700'
                       : 'bg-red-600 text-white hover:bg-red-700'
