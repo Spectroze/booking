@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && 
+             (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true);
+    }
+    
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own data
+      allow read: if isOwner(userId);
+      
+      // Users can create/update their own document
+      allow create: if isAuthenticated() && 
+                       isOwner(userId) &&
+                       request.resource.data.uid == userId;
+      allow update: if isAuthenticated() && 
+                       isOwner(userId) &&
+                       request.resource.data.uid == userId;
+      
+      // Admins can read all user documents
+      allow read: if isAdmin();
+      
+      // Allow reading users collection for server-side operations (API routes)
+      // This is needed for admin notification emails
+      // Note: In production, consider using Firebase Admin SDK instead
+      allow read: if true; // Temporarily allow all reads - consider restricting in production
+    }
+    
+    // Bookings collection
+    match /bookings/{bookingId} {
+      // Authenticated users can create bookings
+      allow create: if isAuthenticated();
+      
+      // Users can read their own bookings (if we add userId field later)
+      // For now, allow all authenticated users to read
+      allow read: if isAuthenticated();
+      
+      // Admins can read, update, and delete all bookings
+      allow read, update, delete: if isAdmin();
+    }
+    
+    // Appointments collection
+    match /appointments/{appointmentId} {
+      // Only admins can create, read, update, and delete appointments
+      allow read, write: if isAdmin();
+    }
+  }
+}
+
