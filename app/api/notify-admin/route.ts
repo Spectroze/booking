@@ -38,15 +38,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get admin emails - try environment variable first, then try Firestore
+    // Get admin emails - prioritize environment variable (most reliable for deployment)
     let adminEmails: string[] = getAdminEmails();
     
-    // If no admin emails from env, try to get from Firestore (requires proper setup)
+    console.log(`Found ${adminEmails.length} admin email(s) from environment variable`);
+    
+    // If no admin emails from env, try to get from Firestore (may not work in serverless environment)
     if (adminEmails.length === 0) {
+      console.log('No ADMIN_EMAILS env var found, attempting to fetch from Firestore...');
       try {
-        // Try using client SDK with a workaround - this requires Firestore rules update
+        // Try using client SDK - this may not work in serverless/edge environments
         const { collection, getDocs } = await import('firebase/firestore');
         const { db: clientDb } = await import('../../services/firebase');
+        
+        // Check if db is available (might be mock in SSR)
+        if (!clientDb || typeof (clientDb as any).collection !== 'function') {
+          throw new Error('Firestore not available in server environment');
+        }
+        
         const usersRef = collection(clientDb, 'users');
         const allUsersSnapshot = await getDocs(usersRef);
         
@@ -56,16 +65,19 @@ export async function POST(request: NextRequest) {
             adminEmails.push(userData.email);
           }
         });
+        
+        console.log(`Found ${adminEmails.length} admin email(s) from Firestore`);
       } catch (firestoreError: any) {
         console.error('Error fetching admins from Firestore:', firestoreError);
         // If Firestore access fails, provide helpful error message
-        if (firestoreError.code === 'permission-denied') {
+        if (firestoreError.code === 'permission-denied' || firestoreError.message?.includes('not available')) {
           return NextResponse.json(
             { 
-              error: 'Firestore permission denied. Please either: 1) Set ADMIN_EMAILS environment variable, or 2) Update Firestore rules to allow reading users collection',
-              hint: 'Add ADMIN_EMAILS=admin1@example.com,admin2@example.com to your .env.local file'
+              error: 'Unable to fetch admin emails. Please set ADMIN_EMAILS environment variable in your deployment platform.',
+              hint: 'In Vercel/Netlify/etc, add ADMIN_EMAILS=admin1@example.com,admin2@example.com to your environment variables',
+              details: firestoreError.message || firestoreError.code
             },
-            { status: 403 }
+            { status: 500 }
           );
         }
       }
@@ -74,10 +86,14 @@ export async function POST(request: NextRequest) {
     console.log(`Found ${adminEmails.length} admin(s) to notify:`, adminEmails);
 
     if (adminEmails.length === 0) {
-      console.warn('No admin users found in database');
+      console.warn('No admin emails found - neither from env var nor Firestore');
       return NextResponse.json(
-        { message: 'No admin users found to notify', warning: 'Please ensure at least one user has role="admin" or isAdmin=true in Firestore' },
-        { status: 200 }
+        { 
+          error: 'No admin emails found. Please set ADMIN_EMAILS environment variable in your deployment platform.',
+          hint: 'In your deployment platform (Vercel/Netlify/etc), add: ADMIN_EMAILS=admin1@gmail.com,admin2@gmail.com',
+          message: 'No admin users found to notify'
+        },
+        { status: 400 }
       );
     }
 
