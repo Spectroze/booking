@@ -53,6 +53,12 @@ service cloud.firestore {
       // Admins can read, update, and delete all bookings
       allow read, update, delete: if isAdmin();
     }
+
+    // Counters collection (used for booking reference generation)
+    // Allow authenticated users to increment the bookingReference counter
+    match /counters/{counterId} {
+      allow read, update, create: if isAuthenticated();
+    }
     
     // Appointments collection
     match /appointments/{appointmentId} {

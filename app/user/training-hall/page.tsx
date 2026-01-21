@@ -12,6 +12,7 @@ export default function TrainingHallPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [generatedReferenceNo, setGeneratedReferenceNo] = useState<string>('');
   const [formData, setFormData] = useState({
     bookingReferenceNo: '',
     // Requesting Party Information
@@ -82,7 +83,6 @@ export default function TrainingHallPage() {
 
       const bookingData = {
         type: 'training-hall' as const,
-        bookingReferenceNo: formData.bookingReferenceNo || undefined,
         dateOfRequest: formData.dateOfRequest,
         contactPerson: formData.contactPerson,
         requestingOffice: formData.requestingOffice,
@@ -122,7 +122,8 @@ export default function TrainingHallPage() {
         additionalNotes: formData.additionalNotes || undefined,
       };
 
-      await createBooking(bookingData);
+      const result = await createBooking(bookingData);
+      setGeneratedReferenceNo(result.bookingReferenceNo);
 
       // Notify admins about the new booking
       try {
@@ -143,14 +144,40 @@ export default function TrainingHallPage() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          console.error('Admin notification failed:', errorData);
+          // Try to get error message from response
+          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          try {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const errorData = await response.json();
+              if (errorData.error) {
+                errorMessage = errorData.error;
+              } else if (errorData.message) {
+                errorMessage = errorData.message;
+              } else if (Object.keys(errorData).length > 0) {
+                errorMessage = JSON.stringify(errorData);
+              }
+            } else {
+              const text = await response.text();
+              if (text) {
+                errorMessage = text;
+              }
+            }
+          } catch (parseError) {
+            // If parsing fails, use default error message
+            console.warn('Could not parse error response:', parseError);
+          }
+          console.warn('Admin notification failed:', errorMessage);
         } else {
-          const result = await response.json();
-          console.log('Admin notification sent:', result);
+          try {
+            const result = await response.json();
+            console.log('Admin notification sent:', result);
+          } catch (parseError) {
+            console.warn('Admin notification may have succeeded but could not parse response');
+          }
         }
-      } catch (notifyError) {
-        console.error('Error notifying admins:', notifyError);
+      } catch (notifyError: any) {
+        console.warn('Error notifying admins:', notifyError?.message || notifyError);
         // Don't fail the booking if notification fails
       }
 
@@ -204,10 +231,14 @@ export default function TrainingHallPage() {
               </label>
               <input
                 type="text"
-                value={formData.bookingReferenceNo}
-                onChange={(e) => setFormData({ ...formData, bookingReferenceNo: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                value={generatedReferenceNo || 'Will be generated upon submission'}
+                readOnly
+                disabled
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Reference number will be automatically generated when you submit the form
+              </p>
             </div>
 
             {/* REQUESTING PARTY INFORMATION */}
@@ -750,9 +781,22 @@ export default function TrainingHallPage() {
                 <h3 className="text-xl font-bold text-green-900 dark:text-green-100 mb-2">
                   Booking Submitted Successfully!
                 </h3>
-                <p className="text-gray-700 dark:text-gray-300 mb-4">
+                <p className="text-gray-700 dark:text-gray-300 mb-2">
                   Your booking request has been submitted. We will review it and contact you soon to confirm. You will receive an email notification once your booking is processed.
                 </p>
+                {generatedReferenceNo && (
+                  <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <p className="text-sm font-medium text-green-900 dark:text-green-100 mb-1">
+                      Your Booking Reference Number:
+                    </p>
+                    <p className="text-lg font-bold text-green-700 dark:text-green-300 font-mono">
+                      {generatedReferenceNo}
+                    </p>
+                    <p className="text-xs text-green-700 dark:text-green-400 mt-2">
+                      Please save this reference number for your records.
+                    </p>
+                  </div>
+                )}
                 <button
                   onClick={() => {
                     setShowSuccessModal(false);

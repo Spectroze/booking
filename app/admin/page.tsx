@@ -211,6 +211,16 @@ export default function AdminPage() {
     }
   };
 
+  // Convert 24-hour time (HH:MM) to 12-hour format with AM/PM
+  const formatTime12Hour = (time24: string) => {
+    if (!time24) return '';
+    const [hours, minutes] = time24.split(':');
+    const hour = parseInt(hours, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
   // Get history bookings (confirmed and cancelled)
   const historyBookings = bookings.filter(
     booking => booking.status === 'confirmed' || booking.status === 'cancelled'
@@ -307,10 +317,21 @@ export default function AdminPage() {
               const isToday = day && day.toDateString() === new Date().toDateString();
               const isPast = day && day < new Date() && !isToday;
 
+              // Helper function to check if time is AM (00:00-11:59) or PM (12:00-23:59)
+              const isAM = (time: string) => {
+                const [hours] = time.split(':');
+                const hour = parseInt(hours, 10);
+                return hour < 12;
+              };
+
+              // Separate bookings into AM and PM
+              const amBookings = dayBookings.filter(booking => isAM(booking.startTime));
+              const pmBookings = dayBookings.filter(booking => !isAM(booking.startTime));
+
               return (
                 <div
                   key={index}
-                  className={`min-h-[60px] sm:min-h-[100px] border rounded-lg p-1 sm:p-2 ${
+                  className={`relative overflow-hidden min-h-[100px] sm:min-h-[140px] aspect-square border rounded-lg p-1.5 sm:p-2.5 ${
                     day
                       ? isToday
                         ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700'
@@ -322,7 +343,19 @@ export default function AdminPage() {
                 >
                   {day && (
                     <>
-                      <div className={`text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 ${
+                      <div
+                        className="absolute inset-0 pointer-events-none z-0 bg-[linear-gradient(135deg,transparent_49%,rgba(0,0,0,0.18)_50%,transparent_51%)] dark:bg-[linear-gradient(135deg,transparent_49%,rgba(255,255,255,0.22)_50%,transparent_51%)]"
+                        aria-hidden
+                      />
+                      <span className="absolute top-1 left-1 text-[10px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 z-10">
+                        AM
+                      </span>
+                      <span className="absolute bottom-1 right-1 text-[10px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 z-10">
+                        PM
+                      </span>
+
+                      {/* Date number */}
+                      <div className={`absolute top-1 right-1 text-xs sm:text-sm font-medium z-10 ${
                         isToday
                           ? 'text-blue-700 dark:text-blue-300'
                           : isPast
@@ -331,23 +364,49 @@ export default function AdminPage() {
                       }`}>
                         {day.getDate()}
                       </div>
-                      <div className="space-y-0.5 sm:space-y-1">
-                        {dayBookings.slice(0, 1).map(booking => (
-                          <div
-                            key={booking.id}
-                            onClick={() => openBookingModal(booking)}
-                            className={`text-[10px] sm:text-xs ${getStatusColor(booking.status)} text-white px-1 sm:px-2 py-0.5 sm:py-1 rounded truncate cursor-pointer hover:opacity-80`}
-                            title={`${booking.startTime} - ${booking.endTime}: ${booking.eventTitle || booking.type}`}
-                          >
-                            <span className="hidden sm:inline">{booking.startTime} - {booking.eventTitle || booking.type}</span>
-                            <span className="sm:hidden">{booking.startTime}</span>
-                          </div>
-                        ))}
-                        {dayBookings.length > 1 && (
-                          <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 px-1 sm:px-2">
-                            +{dayBookings.length - 1} more
-                          </div>
-                        )}
+
+                      {/* AM Bookings - Upper Left Triangle */}
+                      <div className="absolute top-0 left-0 w-1/2 h-1/2 overflow-hidden z-10 pointer-events-none">
+                        <div className="absolute top-0 left-0 w-full h-full flex flex-col items-start justify-start p-1 sm:p-2 space-y-0.5 sm:space-y-1 pointer-events-auto">
+                          {amBookings.slice(0, 2).map(booking => (
+                            <div
+                              key={booking.id}
+                              onClick={() => openBookingModal(booking)}
+                              className={`text-[8px] sm:text-[10px] ${getStatusColor(booking.status)} text-white px-1 sm:px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80 max-w-full`}
+                              title={`${formatTime12Hour(booking.startTime)} - ${formatTime12Hour(booking.endTime)}: ${booking.eventTitle || booking.type}`}
+                            >
+                              <span className="hidden sm:inline">{formatTime12Hour(booking.startTime)} - {booking.eventTitle || booking.type}</span>
+                              <span className="sm:hidden">{formatTime12Hour(booking.startTime)}</span>
+                            </div>
+                          ))}
+                          {amBookings.length > 2 && (
+                            <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 px-1">
+                              +{amBookings.length - 2}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* PM Bookings - Bottom Right Triangle */}
+                      <div className="absolute bottom-0 right-0 w-1/2 h-1/2 overflow-hidden z-10 pointer-events-none">
+                        <div className="absolute bottom-0 right-0 w-full h-full flex flex-col items-end justify-end p-1 sm:p-2 space-y-0.5 sm:space-y-1 pointer-events-auto">
+                          {pmBookings.slice(0, 2).map(booking => (
+                            <div
+                              key={booking.id}
+                              onClick={() => openBookingModal(booking)}
+                              className={`text-[8px] sm:text-[10px] ${getStatusColor(booking.status)} text-white px-1 sm:px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80 max-w-full`}
+                              title={`${formatTime12Hour(booking.startTime)} - ${formatTime12Hour(booking.endTime)}: ${booking.eventTitle || booking.type}`}
+                            >
+                              <span className="hidden sm:inline">{formatTime12Hour(booking.startTime)} - {booking.eventTitle || booking.type}</span>
+                              <span className="sm:hidden">{formatTime12Hour(booking.startTime)}</span>
+                            </div>
+                          ))}
+                          {pmBookings.length > 2 && (
+                            <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 px-1">
+                              +{pmBookings.length - 2}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </>
                   )}
@@ -397,7 +456,7 @@ export default function AdminPage() {
                             })}
                           </td>
                           <td className="py-3 px-4 text-gray-900 dark:text-white">
-                            {booking.startTime} - {booking.endTime}
+                            {formatTime12Hour(booking.startTime)} - {formatTime12Hour(booking.endTime)}
                           </td>
                           <td className="py-3 px-4 text-gray-900 dark:text-white capitalize">
                             {booking.type === 'dome-tent' ? 'Dome Tent' : 'Training Hall'}
@@ -446,7 +505,7 @@ export default function AdminPage() {
                             })}
                           </p>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            {booking.startTime} - {booking.endTime}
+                            {formatTime12Hour(booking.startTime)} - {formatTime12Hour(booking.endTime)}
                           </p>
                         </div>
                         <span
@@ -593,13 +652,13 @@ export default function AdminPage() {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Start Time
                         </label>
-                        <p className="text-gray-900 dark:text-white">{selectedBooking.startTime}</p>
+                        <p className="text-gray-900 dark:text-white">{formatTime12Hour(selectedBooking.startTime)}</p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           End Time
                         </label>
-                        <p className="text-gray-900 dark:text-white">{selectedBooking.endTime}</p>
+                        <p className="text-gray-900 dark:text-white">{formatTime12Hour(selectedBooking.endTime)}</p>
                       </div>
                     </div>
                   </div>

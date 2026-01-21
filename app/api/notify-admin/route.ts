@@ -14,6 +14,16 @@ const getAdminEmails = (): string[] => {
   return [];
 };
 
+// Convert 24-hour time (HH:MM) to 12-hour with AM/PM
+const formatTime12Hour = (time24?: string) => {
+  if (!time24) return '';
+  const [hours, minutes] = time24.split(':');
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minutes} ${ampm}`;
+};
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -183,7 +193,7 @@ export async function POST(request: NextRequest) {
                 ${booking.bookingReferenceNo ? `<p><span class="label">Booking Reference No.:</span> <span class="value">${booking.bookingReferenceNo}</span></p>` : ''}
                 ${booking.eventTitle ? `<p><span class="label">Event Title:</span> <span class="value">${booking.eventTitle}</span></p>` : ''}
                 <p><span class="label">Date:</span> <span class="value">${formatDate(booking.date)}</span></p>
-                <p><span class="label">Time:</span> <span class="value">${booking.startTime} - ${booking.endTime}</span></p>
+                <p><span class="label">Time:</span> <span class="value">${formatTime12Hour(booking.startTime)} - ${formatTime12Hour(booking.endTime)}</span></p>
                 ${booking.expectedNumberOfParticipants ? `<p><span class="label">Expected Participants:</span> <span class="value">${booking.expectedNumberOfParticipants}</span></p>` : ''}
               </div>
 
@@ -233,7 +243,7 @@ A new booking request has been submitted and requires your review.
 Booking Summary:
 Venue: ${venueType}
 ${booking.bookingReferenceNo ? `Booking Reference No.: ${booking.bookingReferenceNo}\n` : ''}${booking.eventTitle ? `Event Title: ${booking.eventTitle}\n` : ''}Date: ${formatDate(booking.date)}
-Time: ${booking.startTime} - ${booking.endTime}
+Time: ${formatTime12Hour(booking.startTime)} - ${formatTime12Hour(booking.endTime)}
 ${booking.expectedNumberOfParticipants ? `Expected Participants: ${booking.expectedNumberOfParticipants}\n` : ''}
 ${booking.contactPerson ? `Contact Person: ${booking.contactPerson}\n` : ''}${booking.requestingOffice ? `Requesting Office: ${booking.requestingOffice}\n` : ''}${booking.mobileNo ? `Mobile No.: ${booking.mobileNo}\n` : ''}
 ${equipmentList !== 'None' ? `Equipment and Services: ${equipmentList}\n` : ''}
@@ -286,10 +296,26 @@ This is an automated notification email.
     );
   } catch (error: any) {
     console.error('Error sending admin notification:', error);
-    return NextResponse.json(
-      { error: 'Failed to send admin notification', details: error.message },
-      { status: 500 }
-    );
+    const errorMessage = error?.message || 'Unknown error occurred';
+    const errorDetails = {
+      error: 'Failed to send admin notification',
+      message: errorMessage,
+      details: error?.toString() || 'An unexpected error occurred while processing the admin notification'
+    };
+    
+    // Ensure we always return valid JSON
+    try {
+      return NextResponse.json(errorDetails, { status: 500 });
+    } catch (jsonError) {
+      // Fallback if JSON.stringify fails (shouldn't happen, but just in case)
+      return new NextResponse(
+        JSON.stringify(errorDetails),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
   }
 }
 

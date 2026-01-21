@@ -10,6 +10,7 @@ import {
   Timestamp,
   QuerySnapshot,
   DocumentData,
+  runTransaction,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -114,18 +115,55 @@ const convertBooking = (doc: DocumentData): Booking => {
   };
 };
 
+// Generate sequential booking reference number: YYYY-0001, YYYY-0002, ...
+const generateBookingReferenceNo = async (): Promise<string> => {
+  const counterRef = doc(db, 'counters', 'bookingReference');
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  const referenceNo = await runTransaction(db, async (transaction) => {
+    const counterSnap = await transaction.get(counterRef);
+
+    let nextSequence = 1;
+    if (counterSnap.exists()) {
+      const data = counterSnap.data() as { year?: number; sequence?: number };
+      if (data.year === currentYear && typeof data.sequence === 'number') {
+        nextSequence = data.sequence + 1;
+      }
+    }
+
+    // Update counter document
+    transaction.set(counterRef, {
+      year: currentYear,
+      sequence: nextSequence,
+      updatedAt: Timestamp.now(),
+    });
+
+    const padded = String(nextSequence).padStart(4, '0');
+    return `${currentYear}-${padded}`;
+  });
+
+  return referenceNo;
+};
+
 // Create a new booking
-export const createBooking = async (booking: Omit<Booking, 'id' | 'createdAt' | 'status'>): Promise<string> => {
+export const createBooking = async (
+  booking: Omit<Booking, 'id' | 'createdAt' | 'status'>
+): Promise<{ id: string; bookingReferenceNo: string }> => {
+  // Auto-generate booking reference number if not provided
+  const bookingReferenceNo = booking.bookingReferenceNo || await generateBookingReferenceNo();
+
   // Remove all undefined values before saving
   const cleanedBooking = removeUndefined({
     ...booking,
+    bookingReferenceNo,
     date: Timestamp.fromDate(booking.date),
     status: 'pending',
     createdAt: Timestamp.now(),
   });
   
   const bookingRef = await addDoc(collection(db, 'bookings'), cleanedBooking);
-  return bookingRef.id;
+  return { id: bookingRef.id, bookingReferenceNo };
 };
 
 // Get all bookings
