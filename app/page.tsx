@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { signInWithGoogle, isAdmin, signOut } from './services/auth';
+import { signInWithGoogle, getUserRole, signOut } from './services/auth';
 import { useRouter } from 'next/navigation';
 
 export default function Home() {
@@ -91,13 +91,21 @@ export default function Home() {
       }
 
       // Code verified - proceed with redirect
-      // Check if user is admin
-      const adminStatus = await isAdmin(userUid);
+      // Get user role and redirect accordingly
+      const userRole = await getUserRole(userUid);
       
-      // Redirect based on admin status
-      if (adminStatus) {
+      // Redirect based on role
+      if (userRole === 'admin-training') {
+        // Admin training → Training Hall Dashboard
         router.push('/admin');
+      } else if (userRole === 'admin-dome') {
+        // Admin dome → Dome Tent Dashboard
+        router.push('/admin/admin-dome-tent');
+      } else if (userRole === 'admin') {
+        // General admin → Dashboard selection page
+        router.push('/admin/select-dashboard');
       } else {
+        // Regular user → User page
         router.push('/user');
       }
     } catch (error: any) {

@@ -19,7 +19,7 @@ export interface UserData {
   email: string;
   displayName: string;
   photoURL?: string;
-  role?: 'user' | 'admin';
+  role?: 'user' | 'admin' | 'admin-training' | 'admin-dome';
   isAdmin?: boolean; // Keep for backward compatibility
   createdAt?: any;
   lastLogin?: any;
@@ -87,9 +87,53 @@ export const isAdmin = async (uid: string): Promise<boolean> => {
   try {
     const userData = await getUserData(uid);
     // Check both role field and isAdmin field for backward compatibility
-    return userData?.role === 'admin' || userData?.isAdmin === true;
+    return userData?.role === 'admin' || userData?.role === 'admin-training' || userData?.role === 'admin-dome' || userData?.isAdmin === true;
   } catch (error) {
     console.error('Error checking admin status:', error);
+    return false;
+  }
+};
+
+// Get user role
+export const getUserRole = async (uid: string): Promise<string | null> => {
+  try {
+    const userData = await getUserData(uid);
+    return userData?.role || null;
+  } catch (error) {
+    console.error('Error getting user role:', error);
+    return null;
+  }
+};
+
+// Check if user is admin-training
+export const isAdminTraining = async (uid: string): Promise<boolean> => {
+  try {
+    const userData = await getUserData(uid);
+    return userData?.role === 'admin-training';
+  } catch (error) {
+    console.error('Error checking admin-training status:', error);
+    return false;
+  }
+};
+
+// Check if user is admin-dome
+export const isAdminDome = async (uid: string): Promise<boolean> => {
+  try {
+    const userData = await getUserData(uid);
+    return userData?.role === 'admin-dome';
+  } catch (error) {
+    console.error('Error checking admin-dome status:', error);
+    return false;
+  }
+};
+
+// Check if user is general admin (can choose dashboard)
+export const isGeneralAdmin = async (uid: string): Promise<boolean> => {
+  try {
+    const userData = await getUserData(uid);
+    return userData?.role === 'admin';
+  } catch (error) {
+    console.error('Error checking general admin status:', error);
     return false;
   }
 };

@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Booking, subscribeToBookings, updateBookingStatus } from '../services/bookings';
-import { auth, getUserRole, signOut } from '../services/auth';
+import { Booking, subscribeToBookings, updateBookingStatus } from '../../services/bookings';
+import { auth, getUserRole, signOut } from '../../services/auth';
 import { useRouter } from 'next/navigation';
 
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
 
-export default function AdminPage() {
+export default function AdminDomeTentPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showModal, setShowModal] = useState(false);
@@ -24,8 +24,8 @@ export default function AdminPage() {
   } | null>(null);
   const router = useRouter();
 
-  // Filter bookings by type - only training-hall
-  const filteredBookings = bookings.filter(booking => booking.type === 'training-hall');
+  // Filter bookings by type - only dome-tent
+  const filteredBookings = bookings.filter(booking => booking.type === 'dome-tent');
 
   // Check authentication and role
   useEffect(() => {
@@ -35,12 +35,12 @@ export default function AdminPage() {
         return;
       }
 
-      // Check if user has access to training hall dashboard
+      // Check if user has access to dome tent dashboard
       const role = await getUserRole(user.uid);
-      if (role !== 'admin-training' && role !== 'admin') {
-        // If user is admin-dome, redirect to dome tent dashboard
-        if (role === 'admin-dome') {
-          router.push('/admin/admin-dome-tent');
+      if (role !== 'admin-dome' && role !== 'admin') {
+        // If user is admin-training, redirect to training hall dashboard
+        if (role === 'admin-training') {
+          router.push('/admin');
         } else {
           // Otherwise redirect to home
           router.push('/');
@@ -289,7 +289,7 @@ export default function AdminPage() {
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  // Statistics - filtered by training-hall
+  // Statistics - filtered by dome-tent
   const pendingCount = filteredBookings.filter(b => b.status === 'pending' || !b.status).length;
   const confirmedCount = filteredBookings.filter(b => b.status === 'confirmed').length;
   const cancelledCount = filteredBookings.filter(b => b.status === 'cancelled').length;
@@ -318,21 +318,21 @@ export default function AdminPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   )}
-                  {viewMode === 'calendar' ? 'Training Hall Booking Calendar' : viewMode === 'booked' ? 'Training Hall Booked Calendar' : 'Training Hall Booking History'}
+                  {viewMode === 'calendar' ? 'Dome Tent Booking Calendar' : viewMode === 'booked' ? 'Dome Tent Booked Calendar' : 'Dome Tent Booking History'}
                 </h1>
                 {viewMode === 'calendar' && (
                   <p className="text-blue-100 text-sm sm:text-base mt-1">
-                    {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()} - Pending Training Hall Appointments
+                    {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()} - Pending Dome Tent Appointments
                   </p>
                 )}
                 {viewMode === 'booked' && (
                   <p className="text-blue-100 text-sm sm:text-base mt-1">
-                    All confirmed training hall bookings and accepted appointments
+                    All confirmed dome tent bookings and accepted appointments
                   </p>
                 )}
                 {viewMode === 'history' && (
                   <p className="text-blue-100 text-sm sm:text-base mt-1">
-                    All accepted and rejected training hall bookings
+                    All accepted and rejected dome tent bookings
                   </p>
                 )}
               </div>
@@ -748,7 +748,7 @@ export default function AdminPage() {
         </div>
         )}
 
-        {/* History View */}
+        {/* History View - Same as admin page but filtered for dome-tent */}
         {viewMode === 'history' && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
             {historyBookings.length === 0 ? (
@@ -759,10 +759,10 @@ export default function AdminPage() {
                   </svg>
                 </div>
                 <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-medium">
-                  No training hall booking history found
+                  No dome tent booking history found
                 </p>
                 <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">
-                  Accepted and rejected training hall bookings will appear here
+                  Accepted and rejected dome tent bookings will appear here
                 </p>
               </div>
             ) : (
@@ -862,7 +862,7 @@ export default function AdminPage() {
                             </td>
                             <td className="py-5 px-6 text-gray-900 dark:text-white capitalize">
                               <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-bold bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 text-blue-800 dark:text-blue-300 shadow-sm">
-                                {booking.type === 'dome-tent' ? '🏕️ Dome Tent' : '🏛️ Training Hall'}
+                                🏕️ Dome Tent
                               </span>
                             </td>
                             <td className="py-5 px-6 text-gray-900 dark:text-white">
@@ -937,7 +937,7 @@ export default function AdminPage() {
                         <div>
                           <span className="text-gray-600 dark:text-gray-400">Venue: </span>
                           <span className="text-gray-900 dark:text-white capitalize">
-                            {booking.type === 'dome-tent' ? 'Dome Tent' : 'Training Hall'}
+                            Dome Tent
                           </span>
                         </div>
                         {booking.eventTitle && (
@@ -972,7 +972,7 @@ export default function AdminPage() {
         )}
       </div>
 
-      {/* Booking Details Modal */}
+      {/* Booking Details Modal - Same structure as admin page */}
       {showModal && selectedBooking && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full p-4 sm:p-6 my-4 sm:my-8 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
@@ -992,7 +992,7 @@ export default function AdminPage() {
                   Venue Type
                 </label>
                 <p className="text-gray-900 dark:text-white capitalize">
-                  {selectedBooking.type === 'dome-tent' ? 'Dome Tent' : 'Training Hall'}
+                  Dome Tent
                 </p>
               </div>
 
@@ -1095,73 +1095,6 @@ export default function AdminPage() {
                   )}
                 </div>
               </div>
-
-              {/* Type of Activity (Training Hall) */}
-              {selectedBooking.typeOfActivity && (
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Type of Activity
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedBooking.typeOfActivity.training && (
-                      <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">
-                        Training
-                      </span>
-                    )}
-                    {selectedBooking.typeOfActivity.seminar && (
-                      <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">
-                        Seminar
-                      </span>
-                    )}
-                    {selectedBooking.typeOfActivity.workshop && (
-                      <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">
-                        Workshop
-                      </span>
-                    )}
-                    {selectedBooking.typeOfActivity.meeting && (
-                      <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">
-                        Meeting
-                      </span>
-                    )}
-                    {selectedBooking.typeOfActivity.others && (
-                      <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">
-                        {selectedBooking.typeOfActivity.others}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Room Layout Preference (Training Hall) */}
-              {selectedBooking.roomLayoutPreference && (
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Room Layout Preference
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedBooking.roomLayoutPreference.classroom && (
-                      <span className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm">
-                        Classroom
-                      </span>
-                    )}
-                    {selectedBooking.roomLayoutPreference.theater && (
-                      <span className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm">
-                        Theater
-                      </span>
-                    )}
-                    {selectedBooking.roomLayoutPreference.uShape && (
-                      <span className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm">
-                        U-Shape
-                      </span>
-                    )}
-                    {selectedBooking.roomLayoutPreference.boardroom && (
-                      <span className="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm">
-                        Boardroom
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
 
               {/* Equipment and Services */}
               {selectedBooking.equipmentNeeded && (
@@ -1333,7 +1266,7 @@ export default function AdminPage() {
                   })}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  All confirmed training hall appointments for this date
+                  All confirmed dome tent appointments for this date
                 </p>
               </div>
               <button
@@ -1358,7 +1291,7 @@ export default function AdminPage() {
                       </svg>
                     </div>
                     <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">
-                      No confirmed training hall appointments for this date
+                      No confirmed dome tent appointments for this date
                     </p>
                   </div>
                 );
@@ -1400,7 +1333,7 @@ export default function AdminPage() {
                             </div>
                             <div className="flex flex-wrap gap-2 mt-2">
                               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                                {booking.type === 'dome-tent' ? '🏕️ Dome Tent' : '🏛️ Training Hall'}
+                                🏕️ Dome Tent
                               </span>
                               {booking.contactPerson && (
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">

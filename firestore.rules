@@ -7,10 +7,12 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    // Helper function to check if user is admin
+    // Helper function to check if user is admin (includes admin, admin-training, admin-dome)
     function isAdmin() {
       return isAuthenticated() && 
              (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin-training' ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin-dome' ||
               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true);
     }
     
