@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '../../services/auth';
-import { createBooking } from '../../services/bookings';
+import { createBooking, subscribeToBookings, type Booking } from '../../services/bookings';
 
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
@@ -13,6 +13,7 @@ export default function DomeTentPage() {
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [generatedReferenceNo, setGeneratedReferenceNo] = useState<string>('');
+  const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
   const [formData, setFormData] = useState({
     bookingReferenceNo: '',
     // Requesting Party Information
@@ -38,6 +39,9 @@ export default function DomeTentPage() {
     additionalNotes: '',
   });
 
+  // Bookings state for validation
+  const [bookings, setBookings] = useState<Booking[]>([]);
+
   // Check authentication
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -48,12 +52,55 @@ export default function DomeTentPage() {
     return () => unsubscribe();
   }, [router]);
 
+  // Subscribe to dome-tent bookings for validation
+  useEffect(() => {
+    const unsubscribe = subscribeToBookings((bookingsList) => {
+      setBookings(bookingsList.filter((b) => b.type === 'dome-tent'));
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Check if a date is already scheduled (for validation)
+  const isDateScheduled = (date: Date | null): boolean => {
+    if (!date) return false;
+    return bookings.some((b) => {
+      const bookingDate = new Date(b.date);
+      const isPendingOrConfirmed = !b.status || b.status === 'pending' || b.status === 'confirmed';
+      return bookingDate.toDateString() === date.toDateString() && isPendingOrConfirmed;
+    });
+  };
+
+  // Show toast notification
+  const showToast = (message: string, type: 'error' | 'success' = 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 5000); // Auto-dismiss after 5 seconds
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate phone number
     if (formData.mobileNo.length !== 11) {
-      alert('Please enter a valid 11-digit mobile number.');
+      showToast('Please enter a valid 11-digit mobile number.', 'error');
+      return;
+    }
+
+    // Validate if date is selected
+    if (!formData.date) {
+      showToast('Please select a date for your event.', 'error');
+      return;
+    }
+
+    // Check if the selected date is already scheduled
+    const selectedDate = new Date(formData.date);
+    if (isDateScheduled(selectedDate)) {
+      const formattedDate = selectedDate.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      showToast(`This date (${formattedDate}) is already booked. Please select another date.`, 'error');
       return;
     }
     
@@ -541,6 +588,55 @@ export default function DomeTentPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 animate-[slideIn_0.3s_ease-out]">
+          <div
+            className={`flex items-center gap-3 px-6 py-4 rounded-lg shadow-lg max-w-md ${
+              toast.type === 'error'
+                ? 'bg-red-50 dark:bg-red-900/30 border-2 border-red-500 dark:border-red-600'
+                : 'bg-green-50 dark:bg-green-900/30 border-2 border-green-500 dark:border-green-600'
+            }`}
+          >
+            <div
+              className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                toast.type === 'error'
+                  ? 'bg-red-500 dark:bg-red-600'
+                  : 'bg-green-500 dark:bg-green-600'
+              }`}
+            >
+              {toast.type === 'error' ? (
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+            <p
+              className={`flex-1 text-sm font-medium ${
+                toast.type === 'error'
+                  ? 'text-red-900 dark:text-red-100'
+                  : 'text-green-900 dark:text-green-100'
+              }`}
+            >
+              {toast.message}
+            </p>
+            <button
+              onClick={() => setToast(null)}
+              className={`flex-shrink-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors`}
+              aria-label="Close"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
       )}
