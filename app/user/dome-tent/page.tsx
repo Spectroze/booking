@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { auth } from '../../services/auth';
 import { createBooking, subscribeToBookings, type Booking } from '../../services/bookings';
@@ -9,7 +9,7 @@ import { toast } from 'react-toastify';
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
 
-export default function DomeTentPage() {
+function DomeTentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dateParam = searchParams.get('date') || '';
@@ -695,5 +695,13 @@ export default function DomeTentPage() {
       )}
 
     </div>
+  );
+}
+
+export default function DomeTentPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>}>
+      <DomeTentContent />
+    </Suspense>
   );
 }
