@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '../services/auth';
 import { subscribeToBookings, type Booking } from '../services/bookings';
+import { toast } from 'react-toastify';
 
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
@@ -50,13 +51,30 @@ export default function UserPage() {
     return days;
   };
 
-  const isDateScheduled = (date: Date | null, venueType: 'dome-tent' | 'training-hall'): boolean => {
-    if (!date) return false;
-    return bookings.some((b) => {
+  const getDayBookings = (date: Date | null, venueType: 'dome-tent' | 'training-hall') => {
+    if (!date) return { am: false, pm: false, hasBookings: false };
+    
+    let am = false;
+    let pm = false;
+    
+    const dayBookings = bookings.filter((b) => {
       const bookingDate = new Date(b.date);
       const isPendingOrConfirmed = !b.status || b.status === 'pending' || b.status === 'confirmed';
       return b.type === venueType && bookingDate.toDateString() === date.toDateString() && isPendingOrConfirmed;
     });
+
+    dayBookings.forEach(b => {
+      if (!b.startTime) return;
+      const [hours] = b.startTime.split(':');
+      const hour = parseInt(hours, 10);
+      if (hour < 12) {
+        am = true;
+      } else {
+        pm = true;
+      }
+    });
+
+    return { am, pm, hasBookings: dayBookings.length > 0 };
   };
 
   const navigateCalendarMonth = (
@@ -115,44 +133,85 @@ export default function UserPage() {
             </div>
           ))}
           {days.map((day, index) => {
-            const scheduled = day ? isDateScheduled(day, venueType) : false;
+            const bookingStatus = getDayBookings(day, venueType);
+            const scheduled = bookingStatus.hasBookings;
             const isToday = day ? day.toDateString() === new Date().toDateString() : false;
             const isPast = day ? day < new Date() && !isToday : false;
+            
+            // Determine background based on AM/PM
+            let bgClass = 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white';
+            if (scheduled) {
+              if (bookingStatus.am && bookingStatus.pm) {
+                // Both AM and PM (Whole day)
+                bgClass = 'bg-orange-500 text-white font-bold text-shadow-sm border-2 border-white/20';
+              } else if (bookingStatus.am) {
+                // AM only
+                bgClass = 'bg-[linear-gradient(135deg,#f97316_50%,transparent_50%)] dark:bg-[linear-gradient(135deg,#f97316_50%,#374151_50%)] bg-gray-100 text-gray-900 dark:text-white font-bold border border-orange-200 dark:border-orange-800/30';
+              } else if (bookingStatus.pm) {
+                // PM only
+                bgClass = 'bg-[linear-gradient(135deg,transparent_50%,#f97316_50%)] dark:bg-[linear-gradient(135deg,#374151_50%,#f97316_50%)] bg-gray-100 text-gray-900 dark:text-white font-bold border border-orange-200 dark:border-orange-800/30';
+              }
+            } else if (isToday) {
+              bgClass = 'bg-blue-500 text-white ring-2 ring-blue-700 dark:ring-blue-400';
+            } else if (isPast) {
+              bgClass = 'text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800';
+            }
 
             return (
               <div
                 key={index}
-                className={`aspect-square flex items-center justify-center rounded text-xs font-medium ${
+                className={`aspect-square relative overflow-hidden flex items-center justify-center rounded text-xs ${
                   !day
                     ? 'invisible'
-                    : isPast
-                      ? 'text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800'
-                      : scheduled
-                        ? 'bg-amber-200 dark:bg-amber-800/60 text-amber-900 dark:text-amber-100'
-                        : isToday
-                          ? 'bg-blue-500 text-white ring-2 ring-blue-700 dark:ring-blue-400'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                    : bgClass
                 }`}
-                title={day ? (scheduled ? 'Scheduled' : isToday ? 'Today' : 'Available') : undefined}
+                title={day ? (scheduled ? (bookingStatus.am && bookingStatus.pm ? 'Whole Day Scheduled' : bookingStatus.am ? 'AM Scheduled' : 'PM Scheduled') : isToday ? 'Today' : 'Available') : undefined}
+                onClick={(e) => {
+                  if (day && scheduled) {
+                    e.stopPropagation();
+                    if (bookingStatus.am && bookingStatus.pm) {
+                      toast.error('This date is fully booked. Please select another date.');
+                    } else if (bookingStatus.am) {
+                      toast.info('AM is already booked. PM is still available!');
+                    } else if (bookingStatus.pm) {
+                      toast.info('PM is already booked. AM is still available!');
+                    }
+                  }
+                }}
               >
-                {day ? day.getDate() : ''}
+                {/* Date Text */}
+                <span className={`relative z-10 ${scheduled && bookingStatus.am && bookingStatus.pm ? 'drop-shadow-md' : ''}`}>
+                  {day ? day.getDate() : ''}
+                </span>
+                
+                {/* Add labels if AM/PM split */}
+                {day && scheduled && (
+                  <>
+                    <span className={`absolute top-0.5 left-1 text-[8px] sm:text-[9px] font-bold ${bookingStatus.am ? 'text-white' : 'text-transparent'}`}>AM</span>
+                    <span className={`absolute bottom-0.5 right-1 text-[8px] sm:text-[9px] font-bold ${bookingStatus.pm ? 'text-white' : 'text-transparent'}`}>PM</span>
+                  </>
+                )}
               </div>
             );
           })}
         </div>
 
-        <div className="flex flex-wrap gap-3 text-xs">
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-gray-200 dark:bg-gray-600" />
+        <div className="flex flex-wrap gap-2 text-[10px] sm:text-xs bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg mt-1 border border-gray-100 dark:border-gray-700">
+          <span className="flex items-center gap-1">
+            <span className="w-2.5 h-2.5 rounded-sm bg-gray-200 dark:bg-gray-600 border border-gray-300 dark:border-gray-500" />
             Available
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-amber-200 dark:bg-amber-800/60" />
-            Scheduled
+          <span className="flex items-center gap-1 ml-1">
+            <span className="w-2.5 h-2.5 rounded-sm bg-[linear-gradient(135deg,#f97316_50%,transparent_50%)] border border-gray-300 dark:border-gray-500" />
+            AM Booked
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-blue-500" />
-            Today
+          <span className="flex items-center gap-1 ml-1">
+            <span className="w-2.5 h-2.5 rounded-sm bg-[linear-gradient(135deg,transparent_50%,#f97316_50%)] border border-gray-300 dark:border-gray-500" />
+            PM Booked
+          </span>
+          <span className="flex items-center gap-1 ml-1">
+            <span className="w-2.5 h-2.5 rounded-sm bg-orange-500 border border-gray-200 dark:border-gray-600" />
+            Fully Booked
           </span>
         </div>
       </div>

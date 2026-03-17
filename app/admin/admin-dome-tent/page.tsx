@@ -504,24 +504,34 @@ export default function AdminDomeTentPage() {
                   key={index}
                   className={`relative overflow-hidden min-h-[100px] sm:min-h-[140px] aspect-square border-2 rounded-xl p-1.5 sm:p-2.5 transition-all hover:shadow-lg ${
                     day
-                      ? isToday
-                        ? 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border-blue-400 dark:border-blue-600 shadow-md'
-                        : isPast
-                        ? 'bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 opacity-75'
-                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
+                      ? (() => {
+                          if (isToday) return 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border-blue-400 dark:border-blue-600 shadow-md';
+                          if (isPast) return 'bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 opacity-75';
+                          
+                          // Determine background gradient based on AM/PM bookings
+                          if (amBookings.length > 0 && pmBookings.length > 0) {
+                            return 'bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-600';
+                          } else if (amBookings.length > 0) {
+                            return 'bg-[linear-gradient(135deg,rgba(249,115,22,0.1)_50%,transparent_50%)] dark:bg-[linear-gradient(135deg,rgba(249,115,22,0.2)_50%,rgba(55,65,81,0.5)_50%)] border-orange-300 dark:border-orange-600 bg-white dark:bg-gray-800';
+                          } else if (pmBookings.length > 0) {
+                            return 'bg-[linear-gradient(135deg,transparent_50%,rgba(249,115,22,0.1)_50%)] dark:bg-[linear-gradient(135deg,rgba(55,65,81,0.5)_50%,rgba(249,115,22,0.2)_50%)] border-orange-300 dark:border-orange-600 bg-white dark:bg-gray-800';
+                          }
+                          
+                          return 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600';
+                        })()
                       : 'bg-transparent border-transparent'
                   }`}
                 >
                   {day && (
                     <>
                       <div
-                        className="absolute inset-0 pointer-events-none z-0 bg-[linear-gradient(135deg,transparent_49%,rgba(0,0,0,0.18)_50%,transparent_51%)] dark:bg-[linear-gradient(135deg,transparent_49%,rgba(255,255,255,0.22)_50%,transparent_51%)]"
+                        className="absolute inset-0 pointer-events-none z-0 bg-[linear-gradient(135deg,transparent_49%,rgba(0,0,0,0.05)_50%,transparent_51%)] dark:bg-[linear-gradient(135deg,transparent_49%,rgba(255,255,255,0.05)_50%,transparent_51%)]"
                         aria-hidden
                       />
-                      <span className="absolute top-1 left-1 text-[10px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 z-10">
+                      <span className={`absolute top-1 left-1 text-[10px] sm:text-xs font-semibold z-10 ${amBookings.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400 dark:text-gray-500'}`}>
                         AM
                       </span>
-                      <span className="absolute bottom-1 right-1 text-[10px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 z-10">
+                      <span className={`absolute bottom-1 right-1 text-[10px] sm:text-xs font-semibold z-10 ${pmBookings.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400 dark:text-gray-500'}`}>
                         PM
                       </span>
 
@@ -658,24 +668,34 @@ export default function AdminDomeTentPage() {
                       : ''
                   } ${
                     day
-                      ? isToday
-                        ? 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border-green-400 dark:border-green-600 shadow-md'
-                        : isPast
-                        ? 'bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 opacity-75'
-                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-600'
+                      ? (() => {
+                          if (isToday) return 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border-green-400 dark:border-green-600 shadow-md';
+                          if (isPast) return 'bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 opacity-75';
+                          
+                          // Determine background gradient based on AM/PM bookings
+                          if (amBookings.length > 0 && pmBookings.length > 0) {
+                            return 'bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-600';
+                          } else if (amBookings.length > 0) {
+                            return 'bg-[linear-gradient(135deg,rgba(249,115,22,0.1)_50%,transparent_50%)] dark:bg-[linear-gradient(135deg,rgba(249,115,22,0.2)_50%,rgba(55,65,81,0.5)_50%)] border-orange-300 dark:border-orange-600 bg-white dark:bg-gray-800';
+                          } else if (pmBookings.length > 0) {
+                            return 'bg-[linear-gradient(135deg,transparent_50%,rgba(249,115,22,0.1)_50%)] dark:bg-[linear-gradient(135deg,rgba(55,65,81,0.5)_50%,rgba(249,115,22,0.2)_50%)] border-orange-300 dark:border-orange-600 bg-white dark:bg-gray-800';
+                          }
+                          
+                          return 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-600';
+                        })()
                       : 'bg-transparent border-transparent'
                   }`}
                 >
                   {day && (
                     <>
                       <div
-                        className="absolute inset-0 pointer-events-none z-0 bg-[linear-gradient(135deg,transparent_49%,rgba(0,0,0,0.18)_50%,transparent_51%)] dark:bg-[linear-gradient(135deg,transparent_49%,rgba(255,255,255,0.22)_50%,transparent_51%)]"
+                        className="absolute inset-0 pointer-events-none z-0 bg-[linear-gradient(135deg,transparent_49%,rgba(0,0,0,0.05)_50%,transparent_51%)] dark:bg-[linear-gradient(135deg,transparent_49%,rgba(255,255,255,0.05)_50%,transparent_51%)]"
                         aria-hidden
                       />
-                      <span className="absolute top-1 left-1 text-[10px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 z-10">
+                      <span className={`absolute top-1 left-1 text-[10px] sm:text-xs font-semibold z-10 ${amBookings.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400 dark:text-gray-500'}`}>
                         AM
                       </span>
-                      <span className="absolute bottom-1 right-1 text-[10px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400 z-10">
+                      <span className={`absolute bottom-1 right-1 text-[10px] sm:text-xs font-semibold z-10 ${pmBookings.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400 dark:text-gray-500'}`}>
                         PM
                       </span>
 

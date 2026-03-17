@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '../../services/auth';
 import { createBooking, subscribeToBookings, type Booking } from '../../services/bookings';
+import { toast } from 'react-toastify';
 
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
@@ -11,9 +12,9 @@ export const dynamic = 'force-dynamic';
 export default function DomeTentPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [submitProgress, setSubmitProgress] = useState(0);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [generatedReferenceNo, setGeneratedReferenceNo] = useState<string>('');
-  const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
   const [formData, setFormData] = useState({
     bookingReferenceNo: '',
     // Requesting Party Information
@@ -60,20 +61,31 @@ export default function DomeTentPage() {
     return () => unsubscribe();
   }, []);
 
-  // Check if a date is already scheduled (for validation)
-  const isDateScheduled = (date: Date | null): boolean => {
-    if (!date) return false;
-    return bookings.some((b) => {
+  // Helper to get booking status for a specific date
+  const getDayBookings = (date: Date | null) => {
+    if (!date) return { am: false, pm: false, hasBookings: false, bookings: [] };
+    
+    let am = false;
+    let pm = false;
+    
+    const dayBookings = bookings.filter((b) => {
       const bookingDate = new Date(b.date);
       const isPendingOrConfirmed = !b.status || b.status === 'pending' || b.status === 'confirmed';
       return bookingDate.toDateString() === date.toDateString() && isPendingOrConfirmed;
     });
-  };
 
-  // Show toast notification
-  const showToast = (message: string, type: 'error' | 'success' = 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 5000); // Auto-dismiss after 5 seconds
+    dayBookings.forEach(b => {
+      if (!b.startTime) return;
+      const [hours] = b.startTime.split(':');
+      const hour = parseInt(hours, 10);
+      if (hour < 12) {
+        am = true;
+      } else {
+        pm = true;
+      }
+    });
+
+    return { am, pm, hasBookings: dayBookings.length > 0, bookings: dayBookings };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,30 +93,73 @@ export default function DomeTentPage() {
     
     // Validate phone number
     if (formData.mobileNo.length !== 11) {
-      showToast('Please enter a valid 11-digit mobile number.', 'error');
+      toast.error('Please enter a valid 11-digit mobile number.');
       return;
     }
 
     // Validate if date is selected
     if (!formData.date) {
-      showToast('Please select a date for your event.', 'error');
+      toast.error('Please select a date for your event.');
       return;
     }
 
-    // Check if the selected date is already scheduled
+    // Check if the selected date is completely scheduled
     const selectedDate = new Date(formData.date);
-    if (isDateScheduled(selectedDate)) {
+    const dayStatus = getDayBookings(selectedDate);
+    
+    if (dayStatus.am && dayStatus.pm) {
       const formattedDate = selectedDate.toLocaleDateString('en-US', { 
         weekday: 'long', 
         year: 'numeric', 
         month: 'long', 
         day: 'numeric' 
       });
-      showToast(`This date (${formattedDate}) is already booked. Please select another date.`, 'error');
+      toast.error(`This date (${formattedDate}) is fully booked. Please select another date.`);
       return;
+    }
+
+    // Check for AM/PM slot overlap
+    if (formData.startTime) {
+      if (formData.endTime && formData.startTime >= formData.endTime) {
+        toast.error('Start time must be before end time.');
+        return;
+      }
+      
+      const getFloatTime = (time: string) => {
+        const [h, m] = time.split(':');
+        return parseInt(h, 10) + parseInt(m, 10) / 60;
+      };
+      
+      const startFloat = getFloatTime(formData.startTime);
+      const endFloat = formData.endTime ? getFloatTime(formData.endTime) : startFloat;
+      
+      const requestsAM = startFloat < 12;
+      // It implies PM if it starts at/after 12, or ends strictly after 12:00
+      const requestsPM = startFloat >= 12 || endFloat > 12;
+
+      if (requestsAM && dayStatus.am) {
+        toast.error('The AM slot for this date is already booked. Please select a PM time (12:00 PM onwards).');
+        return;
+      }
+
+      if (requestsPM && dayStatus.pm) {
+        toast.error('The PM slot for this date is already booked. Please select an AM time (before 12:00 PM).');
+        return;
+      }
     }
     
     setLoading(true);
+    setSubmitProgress(0);
+
+    // Simulate progress bar increment while processing
+    const progressInterval = setInterval(() => {
+      setSubmitProgress(prev => {
+        // Slow down as it gets closer to 90% to wait for actual completion
+        if (prev >= 90) return prev;
+        const increment = prev < 50 ? Math.floor(Math.random() * 15) + 5 : Math.floor(Math.random() * 5) + 1;
+        return Math.min(prev + increment, 90);
+      });
+    }, 200);
 
     try {
       // Get current user's email
@@ -194,12 +249,20 @@ export default function DomeTentPage() {
         // Don't fail the booking if notification fails
       }
 
-      setShowSuccessModal(true);
+      // Once fully complete, jump to 100%
+      clearInterval(progressInterval);
+      setSubmitProgress(100);
+
+      toast.success('Booking successfully submitted!');
+      // Slight delay to let user see 100% before modal shows up
+      setTimeout(() => setShowSuccessModal(true), 300);
     } catch (error) {
+      clearInterval(progressInterval);
+      setSubmitProgress(0);
       console.error('Error creating booking:', error);
-      alert('Failed to submit booking. Please try again.');
+      toast.error('Failed to submit booking. Please try again.');
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 500); // Give it a short moment after completion
     }
   };
 
@@ -365,7 +428,22 @@ export default function DomeTentPage() {
                     type="date"
                     required
                     value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    onChange={(e) => {
+                      if (!e.target.value) {
+                         setFormData({ ...formData, date: '' });
+                         return;
+                      }
+                      const selected = new Date(e.target.value);
+                      const status = getDayBookings(selected);
+                      if (status.am && status.pm) {
+                        toast.error('This date is fully booked. Please select another date.');
+                        setFormData({ ...formData, date: '' });
+                      } else {
+                        setFormData({ ...formData, date: e.target.value });
+                        if (status.am) toast.info('AM is already booked on this date. You may book for PM.');
+                        else if (status.pm) toast.info('PM is already booked on this date. You may book for AM.');
+                      }
+                    }}
                     min={new Date().toISOString().split('T')[0]}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
@@ -528,16 +606,38 @@ export default function DomeTentPage() {
               <button
                 type="button"
                 onClick={() => router.push('/user')}
-                className="flex-1 px-6 py-3 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors font-medium"
+                disabled={loading}
+                className="flex-1 px-6 py-3 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors font-medium disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium overflow-hidden disabled:opacity-100 disabled:cursor-wait"
               >
-                {loading ? 'Submitting...' : 'Submit Booking Request'}
+                {/* Background Progress Bar Fill */}
+                {loading && (
+                  <div 
+                    className="absolute inset-y-0 left-0 bg-blue-800 transition-all duration-200 ease-out" 
+                    style={{ width: `${submitProgress}%` }}
+                  />
+                )}
+                
+                {/* Button Content Context */}
+                <div className="relative z-10 flex items-center justify-center gap-2">
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Submitting... {submitProgress}%</span>
+                    </>
+                  ) : (
+                    'Submit Booking Request'
+                  )}
+                </div>
               </button>
             </div>
           </form>
@@ -592,54 +692,6 @@ export default function DomeTentPage() {
         </div>
       )}
 
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed top-4 right-4 z-50 animate-[slideIn_0.3s_ease-out]">
-          <div
-            className={`flex items-center gap-3 px-6 py-4 rounded-lg shadow-lg max-w-md ${
-              toast.type === 'error'
-                ? 'bg-red-50 dark:bg-red-900/30 border-2 border-red-500 dark:border-red-600'
-                : 'bg-green-50 dark:bg-green-900/30 border-2 border-green-500 dark:border-green-600'
-            }`}
-          >
-            <div
-              className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                toast.type === 'error'
-                  ? 'bg-red-500 dark:bg-red-600'
-                  : 'bg-green-500 dark:bg-green-600'
-              }`}
-            >
-              {toast.type === 'error' ? (
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </div>
-            <p
-              className={`flex-1 text-sm font-medium ${
-                toast.type === 'error'
-                  ? 'text-red-900 dark:text-red-100'
-                  : 'text-green-900 dark:text-green-100'
-              }`}
-            >
-              {toast.message}
-            </p>
-            <button
-              onClick={() => setToast(null)}
-              className={`flex-shrink-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors`}
-              aria-label="Close"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
