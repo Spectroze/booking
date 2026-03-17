@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { auth } from '../../services/auth';
 import { createBooking, subscribeToBookings, type Booking } from '../../services/bookings';
 import { toast } from 'react-toastify';
@@ -11,6 +11,8 @@ export const dynamic = 'force-dynamic';
 
 export default function TrainingHallPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const dateParam = searchParams.get('date') || '';
   const [loading, setLoading] = useState(false);
   const [submitProgress, setSubmitProgress] = useState(0);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -31,8 +33,8 @@ export default function TrainingHallPage() {
       meeting: false,
       others: '',
     },
-    preferredDates: '',
-    date: '',
+    preferredDates: dateParam,
+    date: dateParam,
     startTime: '',
     endTime: '',
     expectedNumberOfParticipants: '',

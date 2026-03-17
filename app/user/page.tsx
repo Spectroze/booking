@@ -160,23 +160,31 @@ export default function UserPage() {
             return (
               <div
                 key={index}
-                className={`aspect-square relative overflow-hidden flex items-center justify-center rounded text-xs ${
+                className={`aspect-square relative overflow-hidden flex items-center justify-center rounded text-xs transition-opacity ${
                   !day
                     ? 'invisible'
                     : bgClass
-                }`}
+                } ${day && !isPast ? 'cursor-pointer hover:opacity-80' : ''}`}
                 title={day ? (scheduled ? (bookingStatus.am && bookingStatus.pm ? 'Whole Day Scheduled' : bookingStatus.am ? 'AM Scheduled' : 'PM Scheduled') : isToday ? 'Today' : 'Available') : undefined}
                 onClick={(e) => {
-                  if (day && scheduled) {
-                    e.stopPropagation();
-                    if (bookingStatus.am && bookingStatus.pm) {
-                      toast.error('This date is fully booked. Please select another date.');
-                    } else if (bookingStatus.am) {
-                      toast.info('AM is already booked. PM is still available!');
-                    } else if (bookingStatus.pm) {
-                      toast.info('PM is already booked. AM is still available!');
-                    }
+                  if (!day || isPast) return;
+                  e.stopPropagation();
+                  
+                  if (scheduled && bookingStatus.am && bookingStatus.pm) {
+                    toast.error('This date is fully booked. Please select another date.');
+                    return;
+                  } else if (scheduled && bookingStatus.am) {
+                    toast.info('AM is already booked. PM is still available!');
+                  } else if (scheduled && bookingStatus.pm) {
+                    toast.info('PM is already booked. AM is still available!');
                   }
+                  
+                  const year = day.getFullYear();
+                  const month = String(day.getMonth() + 1).padStart(2, '0');
+                  const dateNum = String(day.getDate()).padStart(2, '0');
+                  const dateStr = `${year}-${month}-${dateNum}`;
+                  
+                  router.push(`/user/${venueType}?date=${dateStr}`);
                 }}
               >
                 {/* Date Text */}
@@ -218,15 +226,6 @@ export default function UserPage() {
     );
   };
 
-  const handleSelection = (type: 'dome-tent' | 'training-hall') => {
-    setSelectedType(type);
-    if (type === 'dome-tent') {
-      router.push('/user/dome-tent');
-    } else {
-      router.push('/user/training-hall');
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full">
@@ -242,8 +241,7 @@ export default function UserPage() {
         <div className="grid md:grid-cols-2 gap-6">
           {/* Dome Tent Option */}
           <div
-            onClick={() => handleSelection('dome-tent')}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 border-2 border-transparent hover:border-blue-500"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-2 border-transparent flex flex-col h-full"
           >
             <div className="text-center">
               <div className="mb-4">
@@ -279,29 +277,12 @@ export default function UserPage() {
                 {renderCalendar('dome-tent', domeTentCalendarMonth)}
               </div>
 
-              <div className="flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 font-medium">
-                <span>Book Now</span>
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </div>
             </div>
           </div>
 
           {/* Training Hall Option */}
           <div
-            onClick={() => handleSelection('training-hall')}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105 border-2 border-transparent hover:border-green-500"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-2 border-transparent flex flex-col h-full"
           >
             <div className="text-center">
               <div className="mb-4">
@@ -337,22 +318,6 @@ export default function UserPage() {
                 {renderCalendar('training-hall', trainingHallCalendarMonth)}
               </div>
 
-              <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400 font-medium">
-                <span>Book Now</span>
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </div>
             </div>
           </div>
         </div>
