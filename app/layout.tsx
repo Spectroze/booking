@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Booking App - Sign In",
   description: "Sign in with Google to continue",
+  icons: {
+    icon: '/gso.ico',
+  },
 };
 
 export default function RootLayout({

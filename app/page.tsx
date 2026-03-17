@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { signInWithGoogle, getUserRole } from './services/auth';
 import { useRouter } from 'next/navigation';
 
@@ -47,23 +48,35 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 space-y-8">
+        <div className="bg-slate-800/40 backdrop-blur-md rounded-2xl shadow-2xl p-8 space-y-8 border border-slate-700/30">
+          {/* Logo */}
+          <div className="flex justify-center">
+            <div className="relative w-24 h-24">
+              <Image
+                src="/images/gso.png"
+                alt="GSO Logo"
+                fill
+                className="rounded-full object-cover"
+              />
+            </div>
+          </div>
+          
           {/* Header */}
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-white">
               Welcome
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-slate-300">
               Sign in or create an account to continue
             </p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4">
+              <p className="text-sm text-red-200">{error}</p>
             </div>
           )}
 
@@ -71,7 +84,7 @@ export default function Home() {
           <button
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-slate-700/60 hover:bg-slate-600/60 border border-slate-600/50 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg
               className="w-5 h-5"
@@ -96,7 +109,7 @@ export default function Home() {
                 fill="#EA4335"
               />
             </svg>
-            <span className="text-gray-700 dark:text-gray-200 font-medium">
+            <span className="text-gray-100 font-medium">
               {loading ? 'Signing in...' : 'Continue with Google'}
             </span>
           </button>
@@ -104,16 +117,16 @@ export default function Home() {
           {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+              <div className="w-full border-t border-slate-600/50"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+              <span className="px-2 bg-slate-800/40 text-slate-400">
                 Secure authentication
               </span>
             </div>
           </div>  
           {/* Footer */}
-          <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-center text-slate-400">
             By continuing, you agree to our Terms of Service and Privacy Policy
           </p>
         </div>
