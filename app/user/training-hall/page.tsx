@@ -95,11 +95,20 @@ function TrainingHallContent() {
 
     dayBookings.forEach(b => {
       if (!b.startTime) return;
-      const [hours] = b.startTime.split(':');
-      const hour = parseInt(hours, 10);
-      if (hour < 12) {
+
+      const getFloatTime = (time: string) => {
+        if (!time) return 0;
+        const [h, m] = time.split(':');
+        return parseInt(h, 10) + parseInt(m, 10) / 60;
+      };
+
+      const startFloat = getFloatTime(b.startTime);
+      const endFloat = b.endTime ? getFloatTime(b.endTime) : startFloat;
+      
+      if (startFloat < 12) {
         am = true;
-      } else {
+      }
+      if (startFloat >= 12 || endFloat > 12) {
         pm = true;
       }
     });
