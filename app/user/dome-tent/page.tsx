@@ -66,10 +66,10 @@ function DomeTentContent() {
   // Helper to get booking status for a specific date
   const getDayBookings = (date: Date | null) => {
     if (!date) return { am: false, pm: false, hasBookings: false, bookings: [] };
-    
+
     let am = false;
     let pm = false;
-    
+
     const dayBookings = bookings.filter((b) => {
       const bookingDate = new Date(b.date);
       const isPendingOrConfirmed = !b.status || b.status === 'pending' || b.status === 'confirmed';
@@ -87,7 +87,7 @@ function DomeTentContent() {
 
       const startFloat = getFloatTime(b.startTime);
       const endFloat = b.endTime ? getFloatTime(b.endTime) : startFloat;
-      
+
       if (startFloat < 12) {
         am = true;
       }
@@ -101,7 +101,7 @@ function DomeTentContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate phone number
     if (formData.mobileNo.length !== 11) {
       toast.error('Please enter a valid 11-digit mobile number.');
@@ -117,13 +117,13 @@ function DomeTentContent() {
     // Check if the selected date is completely scheduled
     const selectedDate = new Date(formData.date);
     const dayStatus = getDayBookings(selectedDate);
-    
+
     if (dayStatus.am && dayStatus.pm) {
-      const formattedDate = selectedDate.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+      const formattedDate = selectedDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
       });
       toast.error(`This date (${formattedDate}) is fully booked. Please select another date.`);
       return;
@@ -135,15 +135,15 @@ function DomeTentContent() {
         toast.error('Start time must be before end time.');
         return;
       }
-      
+
       const getFloatTime = (time: string) => {
         const [h, m] = time.split(':');
         return parseInt(h, 10) + parseInt(m, 10) / 60;
       };
-      
+
       const startFloat = getFloatTime(formData.startTime);
       const endFloat = formData.endTime ? getFloatTime(formData.endTime) : startFloat;
-      
+
       const requestsAM = startFloat < 12;
       // It implies PM if it starts at/after 12, or ends strictly after 12:00
       const requestsPM = startFloat >= 12 || endFloat > 12;
@@ -158,7 +158,7 @@ function DomeTentContent() {
         return;
       }
     }
-    
+
     setLoading(true);
     setSubmitProgress(0);
 
@@ -211,7 +211,7 @@ function DomeTentContent() {
           ...bookingData,
           date: bookingData.date.toISOString(),
         };
-        
+
         const response = await fetch('/api/notify-admin', {
           method: 'POST',
           headers: {
@@ -330,7 +330,7 @@ function DomeTentContent() {
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 uppercase">
                 REQUESTING PARTY INFORMATION
               </h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -403,7 +403,7 @@ function DomeTentContent() {
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 uppercase">
                 EVENT DETAILS
               </h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -441,8 +441,8 @@ function DomeTentContent() {
                     value={formData.date}
                     onChange={(e) => {
                       if (!e.target.value) {
-                         setFormData({ ...formData, date: '' });
-                         return;
+                        setFormData({ ...formData, date: '' });
+                        return;
                       }
                       const selected = new Date(e.target.value);
                       const status = getDayBookings(selected);
@@ -508,7 +508,7 @@ function DomeTentContent() {
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
                 Equipment and Services Needed (check all that apply):
               </h3>
-              
+
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <input
@@ -629,12 +629,12 @@ function DomeTentContent() {
               >
                 {/* Background Progress Bar Fill */}
                 {loading && (
-                  <div 
-                    className="absolute inset-y-0 left-0 bg-blue-800 transition-all duration-200 ease-out" 
+                  <div
+                    className="absolute inset-y-0 left-0 bg-blue-800 transition-all duration-200 ease-out"
                     style={{ width: `${submitProgress}%` }}
                   />
                 )}
-                
+
                 {/* Button Content Context */}
                 <div className="relative z-10 flex items-center justify-center gap-2">
                   {loading ? (
@@ -666,7 +666,7 @@ function DomeTentContent() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              
+
               {/* Content */}
               <div className="flex-1">
                 <h3 className="text-xl font-bold text-green-900 dark:text-green-100 mb-2">

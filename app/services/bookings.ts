@@ -11,6 +11,7 @@ import {
   QuerySnapshot,
   DocumentData,
   runTransaction,
+  deleteField,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -67,6 +68,8 @@ export interface Booking {
   numberOfGuests?: number;
   specialRequests?: string;
   status?: 'pending' | 'confirmed' | 'cancelled';
+  /** Set when admin rejects (cancels) a pending booking */
+  rejectionReason?: string;
   createdAt?: Date;
 }
 
@@ -187,12 +190,23 @@ export const subscribeToBookings = (
   return unsubscribe;
 };
 
-// Update booking status
+// Update booking status (optional rejectionReason when status is cancelled)
 export const updateBookingStatus = async (
   bookingId: string,
-  status: 'pending' | 'confirmed' | 'cancelled'
+  status: 'pending' | 'confirmed' | 'cancelled',
+  options?: { rejectionReason?: string }
 ): Promise<void> => {
   const bookingRef = doc(db, 'bookings', bookingId);
-  await updateDoc(bookingRef, { status });
+  if (status === 'cancelled') {
+    await updateDoc(bookingRef, {
+      status,
+      rejectionReason: options?.rejectionReason?.trim() ?? '',
+    });
+  } else {
+    await updateDoc(bookingRef, {
+      status,
+      rejectionReason: deleteField(),
+    });
+  }
 };
 

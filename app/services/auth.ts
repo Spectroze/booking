@@ -2,13 +2,19 @@ import {
   signInWithPopup, 
   GoogleAuthProvider, 
   signOut as firebaseSignOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
   User 
 } from 'firebase/auth';
 import { 
   doc, 
   setDoc, 
   getDoc, 
-  serverTimestamp 
+  serverTimestamp,
+  collection,
+  getDocs,
+  updateDoc
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -20,6 +26,7 @@ export interface UserData {
   displayName: string;
   photoURL?: string;
   role?: 'user' | 'admin' | 'admin-training' | 'admin-dome';
+  status?: 'pending' | 'approved' | 'declined';
   isAdmin?: boolean; // Keep for backward compatibility
   createdAt?: any;
   lastLogin?: any;
@@ -47,6 +54,7 @@ export const signInWithGoogle = async (): Promise<User> => {
       await setDoc(userRef, {
         ...userData,
         role: 'user', // Default role is "user"
+        status: 'pending', // Default status is "pending"
         isAdmin: false, // Keep for backward compatibility
         createdAt: serverTimestamp(),
       });
@@ -68,6 +76,52 @@ export const signInWithGoogle = async (): Promise<User> => {
   }
 };
 
+// Sign up with email and password
+export const signUpWithEmail = async (email: string, password: string, displayName: string): Promise<User> => {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    const user = result.user;
+
+    // Set display name on the Firebase Auth profile
+    await updateProfile(user, { displayName });
+
+    // Create user document in Firestore with pending status
+    const userRef = doc(db, 'users', user.uid);
+    await setDoc(userRef, {
+      uid: user.uid,
+      email: user.email || email,
+      displayName,
+      role: 'user',
+      status: 'pending',
+      isAdmin: false,
+      createdAt: serverTimestamp(),
+      lastLogin: serverTimestamp(),
+    });
+
+    return user;
+  } catch (error) {
+    console.error('Error signing up with email:', error);
+    throw error;
+  }
+};
+
+// Sign in with email and password
+export const signInWithEmail = async (email: string, password: string): Promise<User> => {
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    const user = result.user;
+
+    // Update last login
+    const userRef = doc(db, 'users', user.uid);
+    await setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true });
+
+    return user;
+  } catch (error) {
+    console.error('Error signing in with email:', error);
+    throw error;
+  }
+};
+
 export const getUserData = async (uid: string): Promise<UserData | null> => {
   try {
     const userRef = doc(db, 'users', uid);
@@ -80,6 +134,41 @@ export const getUserData = async (uid: string): Promise<UserData | null> => {
   } catch (error) {
     console.error('Error getting user data:', error);
     return null;
+  }
+};
+
+export const getAllUsers = async (): Promise<UserData[]> => {
+  try {
+    const usersCollection = collection(db, 'users');
+    const userSnapshot = await getDocs(usersCollection);
+    return userSnapshot.docs.map(doc => doc.data() as UserData);
+  } catch (error) {
+    console.error('Error getting all users:', error);
+    return [];
+  }
+};
+
+export const updateUserStatus = async (uid: string, status: 'pending' | 'approved' | 'declined'): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, { status });
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    throw error;
+  }
+};
+
+// Update user role (admin only)
+export const updateUserRole = async (
+  uid: string,
+  role: 'user' | 'admin' | 'admin-training' | 'admin-dome'
+): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, { role });
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    throw error;
   }
 };
 

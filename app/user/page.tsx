@@ -53,10 +53,10 @@ export default function UserPage() {
 
   const getDayBookings = (date: Date | null, venueType: 'dome-tent' | 'training-hall') => {
     if (!date) return { am: false, pm: false, hasBookings: false };
-    
+
     let am = false;
     let pm = false;
-    
+
     const dayBookings = bookings.filter((b) => {
       const bookingDate = new Date(b.date);
       const isPendingOrConfirmed = !b.status || b.status === 'pending' || b.status === 'confirmed';
@@ -74,7 +74,7 @@ export default function UserPage() {
 
       const startFloat = getFloatTime(b.startTime);
       const endFloat = b.endTime ? getFloatTime(b.endTime) : startFloat;
-      
+
       if (startFloat < 12) {
         am = true;
       }
@@ -147,17 +147,14 @@ export default function UserPage() {
             const isToday = day ? day.toDateString() === new Date().toDateString() : false;
             const isPast = day ? day < new Date() && !isToday : false;
             
-            // Determine background based on AM/PM
+            // Pending or confirmed slot shading (AM / PM / full day)
             let bgClass = 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white';
             if (scheduled) {
               if (bookingStatus.am && bookingStatus.pm) {
-                // Both AM and PM (Whole day)
                 bgClass = 'bg-orange-500 text-white font-bold text-shadow-sm border-2 border-white/20';
               } else if (bookingStatus.am) {
-                // AM only
                 bgClass = 'bg-[linear-gradient(135deg,#f97316_50%,transparent_50%)] dark:bg-[linear-gradient(135deg,#f97316_50%,#374151_50%)] bg-gray-100 text-gray-900 dark:text-white font-bold border border-orange-200 dark:border-orange-800/30';
               } else if (bookingStatus.pm) {
-                // PM only
                 bgClass = 'bg-[linear-gradient(135deg,transparent_50%,#f97316_50%)] dark:bg-[linear-gradient(135deg,#374151_50%,#f97316_50%)] bg-gray-100 text-gray-900 dark:text-white font-bold border border-orange-200 dark:border-orange-800/30';
               }
             } else if (isToday) {
@@ -178,7 +175,7 @@ export default function UserPage() {
                 onClick={(e) => {
                   if (!day || isPast) return;
                   e.stopPropagation();
-                  
+
                   if (scheduled && bookingStatus.am && bookingStatus.pm) {
                     toast.error('This date is fully booked. Please select another date.');
                     return;

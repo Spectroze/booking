@@ -34,13 +34,11 @@ service cloud.firestore {
                        isOwner(userId) &&
                        request.resource.data.uid == userId;
       
-      // Admins can read all user documents
-      allow read: if isAdmin();
+      // Admins can read and update all user documents (for user management)
+      allow read, update: if isAdmin();
       
-      // Allow reading users collection for server-side operations (API routes)
-      // This is needed for admin notification emails
-      // Note: In production, consider using Firebase Admin SDK instead
-      allow read: if true; // Temporarily allow all reads - consider restricting in production
+      // Allow authenticated users to read (needed for getAllUsers in admin panel)
+      allow read: if isAuthenticated();
     }
     
     // Bookings collection

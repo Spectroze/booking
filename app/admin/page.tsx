@@ -22,6 +22,11 @@ export default function AdminPage() {
     title: string;
     message: string;
   } | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectModalMode, setRejectModalMode] = useState<'rejectPending' | 'cancelConfirmed'>('rejectPending');
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState('');
+  const [rejectSubmitting, setRejectSubmitting] = useState(false);
   const router = useRouter();
 
   // Filter bookings by type - only training-hall
@@ -123,6 +128,23 @@ export default function AdminPage() {
   const closeModal = () => {
     setShowModal(false);
     setSelectedBooking(null);
+    setShowRejectModal(false);
+    setRejectReason('');
+    setRejectError('');
+  };
+
+  const openRejectModal = (mode: 'rejectPending' | 'cancelConfirmed') => {
+    setRejectModalMode(mode);
+    setRejectReason('');
+    setRejectError('');
+    setShowRejectModal(true);
+  };
+
+  const closeRejectModal = () => {
+    if (rejectSubmitting) return;
+    setShowRejectModal(false);
+    setRejectReason('');
+    setRejectError('');
   };
 
   const openDateModal = (date: Date) => {
@@ -199,27 +221,75 @@ export default function AdminPage() {
     }
   };
 
-  const handleRejectBooking = async () => {
+  const handleConfirmRejectBooking = async () => {
     if (!selectedBooking?.id) return;
-    if (confirm('Are you sure you want to reject this booking?')) {
-      try {
-        await updateBookingStatus(selectedBooking.id, 'cancelled');
-        setStatusModalData({
-          type: 'success',
-          title: 'Booking Rejected',
-          message: 'Booking has been rejected successfully.',
-        });
-        closeModal();
-        setShowStatusModal(true);
-      } catch (error) {
-        console.error('Error rejecting booking:', error);
-        setStatusModalData({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to reject booking. Please try again.',
-        });
-        setShowStatusModal(true);
+    const trimmed = rejectReason.trim();
+    if (!trimmed) {
+      setRejectError(
+        rejectModalMode === 'cancelConfirmed'
+          ? 'Please provide a reason for cancelling this booking.'
+          : 'Please provide a reason for rejecting this booking.'
+      );
+      return;
+    }
+    setRejectError('');
+    setRejectSubmitting(true);
+    try {
+      await updateBookingStatus(selectedBooking.id, 'cancelled', { rejectionReason: trimmed });
+      setShowRejectModal(false);
+      setRejectReason('');
+      const cancelledApproved = rejectModalMode === 'cancelConfirmed';
+
+      let emailOk = !selectedBooking.clientEmail;
+      if (selectedBooking.clientEmail) {
+        try {
+          const res = await fetch('/api/send-booking-cancellation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: selectedBooking.clientEmail,
+              booking: selectedBooking,
+              rejectionReason: trimmed,
+              kind: cancelledApproved ? 'cancel_confirmed' : 'reject_pending',
+            }),
+          });
+          emailOk = res.ok;
+        } catch {
+          emailOk = false;
+        }
       }
+
+      const baseCancelled = 'The confirmed booking has been cancelled and the reason has been recorded.';
+      const baseRejected = 'The booking has been rejected and the reason has been recorded.';
+      let detail: string;
+      if (!selectedBooking.clientEmail) {
+        detail = ' No requester email is on file, so no notification was sent.';
+      } else if (emailOk) {
+        detail = ' A notification email was sent to the requester.';
+      } else {
+        detail = ' The notification email could not be sent.';
+      }
+
+      setStatusModalData({
+        type: 'success',
+        title: cancelledApproved ? 'Booking Cancelled' : 'Booking Rejected',
+        message: (cancelledApproved ? baseCancelled : baseRejected) + detail,
+      });
+      closeModal();
+      setShowStatusModal(true);
+    } catch (error) {
+      console.error('Error rejecting booking:', error);
+      setStatusModalData({
+        type: 'error',
+        title: 'Error',
+        message:
+          rejectModalMode === 'cancelConfirmed'
+            ? 'Failed to cancel booking. Please try again.'
+            : 'Failed to reject booking. Please try again.',
+      });
+      setShowStatusModal(true);
+    } finally {
+      setRejectSubmitting(false);
     }
   };
 
@@ -383,6 +453,17 @@ export default function AdminPage() {
                   </span>
                 </button>
                 <button
+                  onClick={() => router.push('/admin/user-management')}
+                  className="px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-violet-500 hover:bg-violet-400 text-white"
+                >
+                  <span className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Users
+                  </span>
+                </button>
+                <button
                   onClick={handleSignOut}
                   className="px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-red-600 hover:bg-red-700 text-white"
                 >
@@ -508,13 +589,13 @@ export default function AdminPage() {
                           if (isToday) return 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border-blue-400 dark:border-blue-600 shadow-md';
                           if (isPast) return 'bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 opacity-75';
                           
-                          // Determine background gradient based on AM/PM bookings
+                          // Pending requests — amber (not green; green = approved in Booked view)
                           if (amBookings.length > 0 && pmBookings.length > 0) {
-                            return 'bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-600';
+                            return 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600';
                           } else if (amBookings.length > 0) {
-                            return 'bg-[linear-gradient(135deg,rgba(249,115,22,0.1)_50%,transparent_50%)] dark:bg-[linear-gradient(135deg,rgba(249,115,22,0.2)_50%,rgba(55,65,81,0.5)_50%)] border-orange-300 dark:border-orange-600 bg-white dark:bg-gray-800';
+                            return 'bg-[linear-gradient(135deg,rgba(245,158,11,0.15)_50%,transparent_50%)] dark:bg-[linear-gradient(135deg,rgba(245,158,11,0.22)_50%,rgba(55,65,81,0.5)_50%)] border-amber-300 dark:border-amber-600 bg-white dark:bg-gray-800';
                           } else if (pmBookings.length > 0) {
-                            return 'bg-[linear-gradient(135deg,transparent_50%,rgba(249,115,22,0.1)_50%)] dark:bg-[linear-gradient(135deg,rgba(55,65,81,0.5)_50%,rgba(249,115,22,0.2)_50%)] border-orange-300 dark:border-orange-600 bg-white dark:bg-gray-800';
+                            return 'bg-[linear-gradient(135deg,transparent_50%,rgba(245,158,11,0.15)_50%)] dark:bg-[linear-gradient(135deg,rgba(55,65,81,0.5)_50%,rgba(245,158,11,0.22)_50%)] border-amber-300 dark:border-amber-600 bg-white dark:bg-gray-800';
                           }
                           
                           return 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600';
@@ -528,10 +609,10 @@ export default function AdminPage() {
                         className="absolute inset-0 pointer-events-none z-0 bg-[linear-gradient(135deg,transparent_49%,rgba(0,0,0,0.05)_50%,transparent_51%)] dark:bg-[linear-gradient(135deg,transparent_49%,rgba(255,255,255,0.05)_50%,transparent_51%)]"
                         aria-hidden
                       />
-                      <span className={`absolute top-1 left-1 text-[10px] sm:text-xs font-semibold z-10 ${amBookings.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                      <span className={`absolute top-1 left-1 text-[10px] sm:text-xs font-semibold z-10 ${amBookings.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
                         AM
                       </span>
-                      <span className={`absolute bottom-1 right-1 text-[10px] sm:text-xs font-semibold z-10 ${pmBookings.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                      <span className={`absolute bottom-1 right-1 text-[10px] sm:text-xs font-semibold z-10 ${pmBookings.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
                         PM
                       </span>
 
@@ -629,141 +710,130 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-2 sm:gap-3">
-            {/* Day Headers */}
+          {/* Calendar grid — same layout as user hub: diagonal AM/PM, full cell when both; green = approved */}
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {dayNames.map(day => (
-              <div key={day} className="text-center font-bold text-gray-700 dark:text-gray-300 py-3 text-sm sm:text-base bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-lg">
+              <div
+                key={day}
+                className="text-center text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+              >
                 <span className="hidden sm:inline">{day}</span>
                 <span className="sm:hidden">{day.substring(0, 1)}</span>
               </div>
             ))}
 
-            {/* Calendar Days */}
             {days.map((day, index) => {
               const dayBookings = getConfirmedBookingsForDate(day);
               const isToday = day && day.toDateString() === new Date().toDateString();
               const isPast = day && day < new Date() && !isToday;
 
-              // Helper function to check if time is AM (00:00-11:59) or PM (12:00-23:59)
               const isAM = (time: string) => {
+                if (!time) return true;
                 const [hours] = time.split(':');
-                const hour = parseInt(hours, 10);
-                return hour < 12;
+                return parseInt(hours, 10) < 12;
               };
+              const amBookings = dayBookings.filter(b => isAM(b.startTime));
+              const pmBookings = dayBookings.filter(b => !isAM(b.startTime));
+              const hasAm = amBookings.length > 0;
+              const hasPm = pmBookings.length > 0;
+              const scheduled = dayBookings.length > 0;
 
-              // Separate bookings into AM and PM
-              const amBookings = dayBookings.filter(booking => isAM(booking.startTime));
-              const pmBookings = dayBookings.filter(booking => !isAM(booking.startTime));
+              let bgClass =
+                'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600';
+              if (day && scheduled) {
+                if (hasAm && hasPm) {
+                  bgClass =
+                    'bg-green-500 text-white font-bold border-2 border-white/20 shadow-sm';
+                } else if (hasAm) {
+                  bgClass =
+                    'bg-[linear-gradient(135deg,#22c55e_50%,transparent_50%)] dark:bg-[linear-gradient(135deg,#22c55e_50%,#374151_50%)] bg-gray-100 text-gray-900 dark:text-white font-bold border border-green-400 dark:border-green-700/50';
+                } else if (hasPm) {
+                  bgClass =
+                    'bg-[linear-gradient(135deg,transparent_50%,#22c55e_50%)] dark:bg-[linear-gradient(135deg,#374151_50%,#22c55e_50%)] bg-gray-100 text-gray-900 dark:text-white font-bold border border-green-400 dark:border-green-700/50';
+                }
+              } else if (day && isToday && !scheduled) {
+                bgClass = 'bg-blue-500 text-white ring-2 ring-blue-700 dark:ring-blue-400 border-0';
+              } else if (day && isPast && !scheduled) {
+                bgClass =
+                  'text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700';
+              } else if (day && !scheduled) {
+                bgClass =
+                  'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-600';
+              }
 
               return (
                 <div
                   key={index}
-                  onClick={() => day && dayBookings.length > 0 && openDateModal(day)}
-                  className={`relative overflow-hidden min-h-[100px] sm:min-h-[140px] aspect-square border-2 rounded-xl p-1.5 sm:p-2.5 transition-all hover:shadow-lg ${
+                  role="gridcell"
+                  onClick={() => day && scheduled && openDateModal(day)}
+                  className={`relative aspect-square overflow-hidden flex items-center justify-center rounded-lg text-xs sm:text-sm transition-all ${
+                    !day ? 'invisible' : bgClass
+                  } ${day && scheduled ? 'cursor-pointer hover:opacity-90' : ''}`}
+                  title={
                     day
-                      ? dayBookings.length > 0
-                        ? 'cursor-pointer hover:scale-105'
-                        : ''
-                      : ''
-                  } ${
-                    day
-                      ? (() => {
-                          if (isToday) return 'bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border-green-400 dark:border-green-600 shadow-md';
-                          if (isPast) return 'bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 opacity-75';
-                          
-                          // Determine background gradient based on AM/PM bookings
-                          if (amBookings.length > 0 && pmBookings.length > 0) {
-                            return 'bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-600';
-                          } else if (amBookings.length > 0) {
-                            return 'bg-[linear-gradient(135deg,rgba(249,115,22,0.1)_50%,transparent_50%)] dark:bg-[linear-gradient(135deg,rgba(249,115,22,0.2)_50%,rgba(55,65,81,0.5)_50%)] border-orange-300 dark:border-orange-600 bg-white dark:bg-gray-800';
-                          } else if (pmBookings.length > 0) {
-                            return 'bg-[linear-gradient(135deg,transparent_50%,rgba(249,115,22,0.1)_50%)] dark:bg-[linear-gradient(135deg,rgba(55,65,81,0.5)_50%,rgba(249,115,22,0.2)_50%)] border-orange-300 dark:border-orange-600 bg-white dark:bg-gray-800';
-                          }
-                          
-                          return 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-600';
-                        })()
-                      : 'bg-transparent border-transparent'
-                  }`}
+                      ? scheduled
+                        ? hasAm && hasPm
+                          ? 'Approved: full day — tap for details'
+                          : hasAm
+                          ? 'Approved: AM — tap for details'
+                          : 'Approved: PM — tap for details'
+                        : isToday
+                        ? 'Today'
+                        : 'No approved booking'
+                      : undefined
+                  }
                 >
                   {day && (
                     <>
-                      <div
-                        className="absolute inset-0 pointer-events-none z-0 bg-[linear-gradient(135deg,transparent_49%,rgba(0,0,0,0.05)_50%,transparent_51%)] dark:bg-[linear-gradient(135deg,transparent_49%,rgba(255,255,255,0.05)_50%,transparent_51%)]"
-                        aria-hidden
-                      />
-                      <span className={`absolute top-1 left-1 text-[10px] sm:text-xs font-semibold z-10 ${amBookings.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                        AM
-                      </span>
-                      <span className={`absolute bottom-1 right-1 text-[10px] sm:text-xs font-semibold z-10 ${pmBookings.length > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                        PM
-                      </span>
-
-                      {/* Date number */}
-                      <div className={`absolute top-1 right-1 text-xs sm:text-sm font-medium z-10 ${
-                        isToday
-                          ? 'text-green-700 dark:text-green-300'
-                          : isPast
-                          ? 'text-gray-400 dark:text-gray-600'
-                          : 'text-gray-900 dark:text-gray-100'
-                      }`}>
+                      <span
+                        className={`relative z-10 ${
+                          scheduled && hasAm && hasPm ? 'drop-shadow-md text-white' : ''
+                        }`}
+                      >
                         {day.getDate()}
-                      </div>
-
-                      {/* AM Bookings - Upper Left Triangle */}
-                      <div className="absolute top-0 left-0 w-1/2 h-1/2 overflow-hidden z-10 pointer-events-none">
-                        <div className="absolute top-0 left-0 w-full h-full flex flex-col items-start justify-start p-1 sm:p-2 space-y-0.5 sm:space-y-1 pointer-events-auto">
-                          {amBookings.slice(0, 2).map(booking => (
-                            <div
-                              key={booking.id}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openBookingModal(booking);
-                              }}
-                              className={`text-[8px] sm:text-[10px] bg-green-600 text-white px-1.5 sm:px-2 py-1 rounded-lg truncate cursor-pointer hover:opacity-90 hover:shadow-md max-w-full transition-all font-medium`}
-                              title={`${formatTime12Hour(booking.startTime)} - ${formatTime12Hour(booking.endTime)}: ${booking.eventTitle || booking.type}`}
-                            >
-                              <span className="hidden sm:inline">{formatTime12Hour(booking.startTime)} - {booking.eventTitle || booking.type}</span>
-                              <span className="sm:hidden">{formatTime12Hour(booking.startTime)}</span>
-                            </div>
-                          ))}
-                          {amBookings.length > 2 && (
-                            <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 px-1">
-                              +{amBookings.length - 2}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* PM Bookings - Bottom Right Triangle */}
-                      <div className="absolute bottom-0 right-0 w-1/2 h-1/2 overflow-hidden z-10 pointer-events-none">
-                        <div className="absolute bottom-0 right-0 w-full h-full flex flex-col items-end justify-end p-1 sm:p-2 space-y-0.5 sm:space-y-1 pointer-events-auto">
-                          {pmBookings.slice(0, 2).map(booking => (
-                            <div
-                              key={booking.id}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openBookingModal(booking);
-                              }}
-                              className={`text-[8px] sm:text-[10px] bg-green-600 text-white px-1.5 sm:px-2 py-1 rounded-lg truncate cursor-pointer hover:opacity-90 hover:shadow-md max-w-full transition-all font-medium`}
-                              title={`${formatTime12Hour(booking.startTime)} - ${formatTime12Hour(booking.endTime)}: ${booking.eventTitle || booking.type}`}
-                            >
-                              <span className="hidden sm:inline">{formatTime12Hour(booking.startTime)} - {booking.eventTitle || booking.type}</span>
-                              <span className="sm:hidden">{formatTime12Hour(booking.startTime)}</span>
-                            </div>
-                          ))}
-                          {pmBookings.length > 2 && (
-                            <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 px-1">
-                              +{pmBookings.length - 2}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      </span>
+                      {scheduled && (
+                        <>
+                          <span
+                            className={`absolute top-0.5 left-1 text-[8px] sm:text-[9px] font-bold ${
+                              hasAm ? 'text-white' : 'text-transparent'
+                            }`}
+                          >
+                            AM
+                          </span>
+                          <span
+                            className={`absolute bottom-0.5 right-1 text-[8px] sm:text-[9px] font-bold ${
+                              hasPm ? 'text-white' : 'text-transparent'
+                            }`}
+                          >
+                            PM
+                          </span>
+                        </>
+                      )}
                     </>
                   )}
                 </div>
               );
             })}
+          </div>
+
+          <div className="flex flex-wrap gap-2 text-[10px] sm:text-xs bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl mt-4 border border-gray-100 dark:border-gray-700">
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm bg-gray-200 dark:bg-gray-600 border border-gray-300 dark:border-gray-500" />
+              Available
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm bg-[linear-gradient(135deg,#22c55e_50%,transparent_50%)] border border-gray-300 dark:border-gray-500" />
+              AM approved
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm bg-[linear-gradient(135deg,transparent_50%,#22c55e_50%)] border border-gray-300 dark:border-gray-500" />
+              PM approved
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm bg-green-500 border border-gray-200 dark:border-gray-600" />
+              Full day
+            </span>
           </div>
         </div>
         )}
@@ -1006,6 +1076,17 @@ export default function AdminPage() {
             </div>
 
             <div className="space-y-4">
+              {selectedBooking.status === 'cancelled' && selectedBooking.rejectionReason && (
+                <div className="rounded-xl border border-red-200 dark:border-red-800/80 bg-gradient-to-br from-red-50 to-rose-50/80 dark:from-red-950/40 dark:to-rose-950/20 p-4 shadow-sm">
+                  <p className="text-[11px] font-bold text-red-700 dark:text-red-300 uppercase tracking-wider mb-1.5">
+                    Rejection reason
+                  </p>
+                  <p className="text-sm text-red-900 dark:text-red-100 whitespace-pre-wrap leading-relaxed">
+                    {selectedBooking.rejectionReason}
+                  </p>
+                </div>
+              )}
+
               {/* Booking Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1247,7 +1328,7 @@ export default function AdminPage() {
               )}
 
               {/* Action Buttons */}
-              {selectedBooking.status === 'pending' && (
+              {(!selectedBooking.status || selectedBooking.status === 'pending') && (
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={handleAcceptBooking}
@@ -1256,7 +1337,8 @@ export default function AdminPage() {
                     Accept Booking
                   </button>
                   <button
-                    onClick={handleRejectBooking}
+                    type="button"
+                    onClick={() => openRejectModal('rejectPending')}
                     className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm sm:text-base"
                   >
                     Reject Booking
@@ -1270,9 +1352,17 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {selectedBooking.status !== 'pending' && (
-                <div className="flex gap-2 sm:gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              {selectedBooking.status === 'confirmed' && (
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
+                    type="button"
+                    onClick={() => openRejectModal('cancelConfirmed')}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm sm:text-base"
+                  >
+                    Cancel booking
+                  </button>
+                  <button
+                    type="button"
                     onClick={closeModal}
                     className="flex-1 px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors text-sm sm:text-base"
                   >
@@ -1280,6 +1370,122 @@ export default function AdminPage() {
                   </button>
                 </div>
               )}
+
+              {selectedBooking.status === 'cancelled' && (
+                <div className="flex gap-2 sm:gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="flex-1 px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors text-sm sm:text-base"
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject booking — reason modal */}
+      {showModal && showRejectModal && selectedBooking && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reject-modal-title"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            onClick={closeRejectModal}
+            aria-label="Close dialog"
+          />
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl ring-1 ring-red-200/50 dark:ring-red-900/50 bg-white dark:bg-gray-900">
+            <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 px-6 py-5 text-white">
+              <div className="flex items-start gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 id="reject-modal-title" className="text-lg font-bold leading-tight">
+                    {rejectModalMode === 'cancelConfirmed'
+                      ? 'Cancel this confirmed booking?'
+                      : 'Reject this booking?'}
+                  </h3>
+                  <p className="mt-1 text-sm text-red-100">
+                    {rejectModalMode === 'cancelConfirmed'
+                      ? 'This revokes an approved reservation. The reason is saved for your records.'
+                      : 'This will cancel the request. The reason is saved for your records.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label htmlFor="reject-reason" className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                  {rejectModalMode === 'cancelConfirmed'
+                    ? 'Reason for cancellation'
+                    : 'Reason for rejection'}{' '}
+                  <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="reject-reason"
+                  rows={4}
+                  value={rejectReason}
+                  onChange={e => {
+                    setRejectReason(e.target.value);
+                    if (rejectError) setRejectError('');
+                  }}
+                  disabled={rejectSubmitting}
+                  placeholder={
+                    rejectModalMode === 'cancelConfirmed'
+                      ? 'e.g. Emergency closure, double-booking resolved, requester withdrew…'
+                      : 'e.g. Date no longer available, venue conflict, incomplete information…'
+                  }
+                  className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/80 px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none transition-shadow resize-y min-h-[100px] disabled:opacity-60"
+                />
+                {rejectError && (
+                  <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                    <svg className="h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {rejectError}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={closeRejectModal}
+                  disabled={rejectSubmitting}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmRejectBooking}
+                  disabled={rejectSubmitting}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 text-white font-semibold shadow-lg shadow-red-500/25 hover:from-red-700 hover:to-rose-700 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {rejectSubmitting ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      {rejectModalMode === 'cancelConfirmed' ? 'Cancelling…' : 'Rejecting…'}
+                    </>
+                  ) : rejectModalMode === 'cancelConfirmed' ? (
+                    'Confirm cancellation'
+                  ) : (
+                    'Confirm rejection'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

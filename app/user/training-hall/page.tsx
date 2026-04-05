@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { auth } from '../../services/auth';
+import { auth, getUserData } from '../../services/auth';
 import { createBooking, subscribeToBookings, type Booking } from '../../services/bookings';
 import { toast } from 'react-toastify';
 
@@ -61,12 +61,16 @@ function TrainingHallContent() {
 
   // Bookings state for validation
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [userStatus, setUserStatus] = useState<'pending' | 'approved' | 'declined' | null>(null);
 
-  // Check authentication
+  // Check authentication and user status
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (!user) {
         router.push('/');
+      } else {
+        const data = await getUserData(user.uid);
+        setUserStatus(data?.status || 'pending');
       }
     });
     return () => unsubscribe();
@@ -327,6 +331,40 @@ function TrainingHallContent() {
 
         {/* Form Container */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 md:p-8 border-2 border-green-400">
+
+          {/* Access Gate Banner */}
+          {userStatus !== 'approved' && userStatus !== null && (
+            <div className={`mb-6 p-4 rounded-xl border flex items-start gap-3 ${
+              userStatus === 'declined'
+                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
+                : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700'
+            }`}>
+              <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                userStatus === 'declined' ? 'bg-red-100 dark:bg-red-900/40' : 'bg-amber-100 dark:bg-amber-900/40'
+              }`}>
+                {userStatus === 'declined' ? (
+                  <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <h4 className={`font-bold text-sm ${userStatus === 'declined' ? 'text-red-800 dark:text-red-200' : 'text-amber-800 dark:text-amber-200'}`}>
+                  {userStatus === 'declined' ? 'Access Denied' : 'Awaiting Admin Approval'}
+                </h4>
+                <p className={`text-sm mt-0.5 ${userStatus === 'declined' ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                  {userStatus === 'declined'
+                    ? 'Your account has been declined. Please contact the administrator for assistance.'
+                    : 'Your account is pending approval. An administrator will review your access shortly before you can submit bookings.'}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Official Header */}
           <div className="text-center mb-8 border-b-2 border-green-400 pb-4">
             <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">Republic of the Philippines</p>
@@ -889,8 +927,8 @@ function TrainingHallContent() {
               </button>
               <button
                 type="submit"
-                disabled={loading}
-                className="relative flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium overflow-hidden disabled:opacity-100 disabled:cursor-wait"
+                disabled={loading || userStatus !== 'approved'}
+                className="relative flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {/* Background Progress Bar Fill */}
                 {loading && (
