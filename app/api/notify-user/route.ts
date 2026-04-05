@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
           <p>Great news! Your account has been <strong style="color:#10b981;">approved</strong> by the administrator.</p>
           <p>You can now sign in and access the booking system.</p>
           <div style="text-align:center;margin:30px 0;">
-            <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://gso-booking.vercel.app/'}" 
+            <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://gso-booking.vercel.app'}" 
                style="background:#10b981;color:white;padding:12px 30px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">
               Sign In Now
             </a>
