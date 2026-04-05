@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Booking, subscribeToBookings, updateBookingStatus } from '../../services/bookings';
-import { auth, getUserRole, signOut } from '../../services/auth';
+import { auth, getUserRole, signOut, subscribeToAllUsers } from '../../services/auth';
+import { CountBadge } from '../CountBadge';
 import { useRouter } from 'next/navigation';
 
 // Disable static generation for this page
@@ -27,32 +28,46 @@ export default function AdminDomeTentPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectError, setRejectError] = useState('');
   const [rejectSubmitting, setRejectSubmitting] = useState(false);
+  const [pendingUserSignups, setPendingUserSignups] = useState(0);
   const router = useRouter();
 
   // Filter bookings by type - only dome-tent
   const filteredBookings = bookings.filter(booking => booking.type === 'dome-tent');
 
-  // Check authentication and role
+  // Check authentication and role + real-time pending user signups (Users badge)
   useEffect(() => {
+    let unsubUsers: (() => void) | undefined;
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (unsubUsers) {
+        unsubUsers();
+        unsubUsers = undefined;
+      }
       if (!user) {
+        setPendingUserSignups(0);
         router.push('/');
         return;
       }
 
-      // Check if user has access to dome tent dashboard
       const role = await getUserRole(user.uid);
       if (role !== 'admin-dome' && role !== 'admin') {
-        // If user is admin-training, redirect to training hall dashboard
         if (role === 'admin-training') {
           router.push('/admin');
         } else {
-          // Otherwise redirect to home
           router.push('/');
         }
+        return;
       }
+
+      unsubUsers = subscribeToAllUsers(all =>
+        setPendingUserSignups(
+          all.filter(u => !u.status || u.status === 'pending').length
+        )
+      );
     });
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      unsubUsers?.();
+    };
   }, [router]);
 
   // Subscribe to real-time bookings
@@ -409,7 +424,7 @@ export default function AdminDomeTentPage() {
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => setViewMode('calendar')}
-                  className={`px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg ${
+                  className={`relative px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg ${
                     viewMode === 'calendar'
                       ? 'bg-white text-blue-600 hover:bg-blue-50 transform hover:scale-105'
                       : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
@@ -421,6 +436,7 @@ export default function AdminDomeTentPage() {
                     </svg>
                     Calendar
                   </span>
+                  <CountBadge count={pendingCount} />
                 </button>
                 <button
                   onClick={() => setViewMode('booked')}
@@ -454,7 +470,7 @@ export default function AdminDomeTentPage() {
                 </button>
                 <button
                   onClick={() => router.push('/admin/user-management')}
-                  className="px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-violet-500 hover:bg-violet-400 text-white"
+                  className="relative px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-violet-500 hover:bg-violet-400 text-white"
                 >
                   <span className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -462,6 +478,7 @@ export default function AdminDomeTentPage() {
                     </svg>
                     Users
                   </span>
+                  <CountBadge count={pendingUserSignups} />
                 </button>
                 <button
                   onClick={handleSignOut}

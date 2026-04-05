@@ -1,15 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   auth,
   getUserRole,
   getAllUsers,
+  subscribeToAllUsers,
   updateUserStatus,
   updateUserRole,
   UserData,
   signOut,
 } from '../../services/auth';
+import { CountBadge } from '../CountBadge';
 
 type AppRole = 'user' | 'admin' | 'admin-training' | 'admin-dome';
 
@@ -42,7 +45,6 @@ async function notifyUserEmail(payload: {
     return false;
   }
 }
-import { useRouter } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,9 +62,24 @@ export default function UserManagementPage() {
   const displayRole = (u: UserData): AppRole =>
     roleDraft[u.uid] ?? ((u.role || 'user') as AppRole);
 
-  // Auth guard
+  const sortUsersList = useCallback((allUsers: UserData[]) => {
+    return [...allUsers].sort((a, b) => {
+      const statusOrder: Record<string, number> = { pending: 0, approved: 1, declined: 2 };
+      const aOrder = statusOrder[a.status || 'pending'] ?? 3;
+      const bOrder = statusOrder[b.status || 'pending'] ?? 3;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return 0;
+    });
+  }, []);
+
+  // Auth guard + real-time user list
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    let unsubUsers: (() => void) | undefined;
+    const unsubAuth = auth.onAuthStateChanged(async (user) => {
+      if (unsubUsers) {
+        unsubUsers();
+        unsubUsers = undefined;
+      }
       if (!user) {
         router.push('/');
         return;
@@ -72,25 +89,23 @@ export default function UserManagementPage() {
         router.push('/');
         return;
       }
-      await loadUsers();
+      setLoading(true);
+      unsubUsers = subscribeToAllUsers(allUsers => {
+        setUsers(sortUsersList(allUsers));
+        setLoading(false);
+      });
     });
-    return () => unsubscribe();
-  }, [router]);
+    return () => {
+      unsubAuth();
+      unsubUsers?.();
+    };
+  }, [router, sortUsersList]);
 
   const loadUsers = async () => {
     setLoading(true);
     try {
       const allUsers = await getAllUsers();
-      // Sort: pending first, then by creation date desc
-      const sorted = allUsers.sort((a, b) => {
-        const statusOrder: Record<string, number> = { pending: 0, approved: 1, declined: 2 };
-        const aOrder = statusOrder[a.status || 'pending'] ?? 3;
-        const bOrder = statusOrder[b.status || 'pending'] ?? 3;
-        if (aOrder !== bOrder) return aOrder - bOrder;
-        return 0;
-      });
-      setUsers(sorted);
-      setFilteredUsers(sorted);
+      setUsers(sortUsersList(allUsers));
     } catch (e) {
       showToast('Failed to load users', 'error');
     } finally {
@@ -275,9 +290,12 @@ export default function UserManagementPage() {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div>
                 <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center gap-3">
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
+                  <span className="relative inline-flex">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <CountBadge count={pendingCount} className="ring-violet-700" />
+                  </span>
                   User Management
                 </h1>
                 <p className="text-purple-100 text-sm sm:text-base mt-1">

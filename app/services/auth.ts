@@ -14,7 +14,8 @@ import {
   serverTimestamp,
   collection,
   getDocs,
-  updateDoc
+  updateDoc,
+  onSnapshot,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -146,6 +147,23 @@ export const getAllUsers = async (): Promise<UserData[]> => {
     console.error('Error getting all users:', error);
     return [];
   }
+};
+
+/** Real-time listener for all user documents (admin dashboards, user management) */
+export const subscribeToAllUsers = (
+  callback: (users: UserData[]) => void
+): (() => void) => {
+  const usersCollection = collection(db, 'users');
+  return onSnapshot(
+    usersCollection,
+    snapshot => {
+      callback(snapshot.docs.map(d => d.data() as UserData));
+    },
+    error => {
+      console.error('subscribeToAllUsers:', error);
+      callback([]);
+    }
+  );
 };
 
 export const updateUserStatus = async (uid: string, status: 'pending' | 'approved' | 'declined'): Promise<void> => {
