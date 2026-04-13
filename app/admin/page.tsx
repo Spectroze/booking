@@ -28,6 +28,9 @@ export default function AdminPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectError, setRejectError] = useState('');
   const [rejectSubmitting, setRejectSubmitting] = useState(false);
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [acceptNote, setAcceptNote] = useState('');
+  const [acceptSubmitting, setAcceptSubmitting] = useState(false);
   const [pendingUserSignups, setPendingUserSignups] = useState(0);
   const router = useRouter();
 
@@ -88,17 +91,17 @@ export default function AdminPage() {
     const startingDayOfWeek = firstDay.getDay();
 
     const days: (Date | null)[] = [];
-    
+
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(null);
     }
-        
+
     // Add all days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       days.push(new Date(year, month, day));
     }
-    
+
     return days;
   };
 
@@ -108,8 +111,8 @@ export default function AdminPage() {
       const bookingDate = new Date(booking.date);
       // Only show pending bookings on the calendar
       // Pending bookings remain visible regardless of date until admin accepts or declines them
-      return bookingDate.toDateString() === date.toDateString() && 
-             (booking.status === 'pending' || !booking.status);
+      return bookingDate.toDateString() === date.toDateString() &&
+        (booking.status === 'pending' || !booking.status);
     });
   };
 
@@ -118,8 +121,8 @@ export default function AdminPage() {
     return filteredBookings.filter(booking => {
       const bookingDate = new Date(booking.date);
       // Only show confirmed/accepted bookings on the booked calendar
-      return bookingDate.toDateString() === date.toDateString() && 
-             booking.status === 'confirmed';
+      return bookingDate.toDateString() === date.toDateString() &&
+        booking.status === 'confirmed';
     });
   };
 
@@ -146,6 +149,8 @@ export default function AdminPage() {
     setShowRejectModal(false);
     setRejectReason('');
     setRejectError('');
+    setShowAcceptModal(false);
+    setAcceptNote('');
   };
 
   const openRejectModal = (mode: 'rejectPending' | 'cancelConfirmed') => {
@@ -174,10 +179,13 @@ export default function AdminPage() {
 
   const handleAcceptBooking = async () => {
     if (!selectedBooking?.id) return;
+    setAcceptSubmitting(true);
     try {
-      // Update booking status first
-      await updateBookingStatus(selectedBooking.id, 'confirmed');
-      
+      // Update booking status with optional admin note
+      await updateBookingStatus(selectedBooking.id, 'confirmed', {
+        adminNote: acceptNote.trim() || undefined,
+      });
+
       // Send confirmation email if email is available
       if (selectedBooking.clientEmail) {
         try {
@@ -188,7 +196,7 @@ export default function AdminPage() {
             },
             body: JSON.stringify({
               to: selectedBooking.clientEmail,
-              booking: selectedBooking,
+              booking: { ...selectedBooking, adminNote: acceptNote.trim() || undefined },
             }),
           });
 
@@ -222,7 +230,9 @@ export default function AdminPage() {
           message: 'Booking has been confirmed successfully! (No email address available)',
         });
       }
-      
+
+      setShowAcceptModal(false);
+      setAcceptNote('');
       closeModal();
       setShowStatusModal(true);
     } catch (error) {
@@ -233,6 +243,8 @@ export default function AdminPage() {
         message: 'Failed to confirm booking. Please try again.',
       });
       setShowStatusModal(true);
+    } finally {
+      setAcceptSubmitting(false);
     }
   };
 
@@ -385,111 +397,103 @@ export default function AdminPage() {
         {/* Header with Gradient */}
         <div className="mb-6 sm:mb-8">
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 rounded-2xl shadow-xl p-6 sm:p-8 mb-6">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-              <div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center gap-3">
+            <div className="flex items-center justify-between gap-6">
+              {/* Title + subtitle — left */}
+              <div className="min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 flex items-center gap-3 truncate">
                   {viewMode === 'calendar' && (
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-7 h-7 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   )}
                   {viewMode === 'booked' && (
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-7 h-7 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   )}
                   {viewMode === 'history' && (
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-7 h-7 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   )}
                   {viewMode === 'calendar' ? 'Training Hall Booking Calendar' : viewMode === 'booked' ? 'Training Hall Booked Calendar' : 'Training Hall Booking History'}
                 </h1>
                 {viewMode === 'calendar' && (
-                  <p className="text-blue-100 text-sm sm:text-base mt-1">
+                  <p className="text-blue-100 text-sm">
                     {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()} - Pending Training Hall Appointments
                   </p>
                 )}
                 {viewMode === 'booked' && (
-                  <p className="text-blue-100 text-sm sm:text-base mt-1">
+                  <p className="text-blue-100 text-sm">
                     All confirmed training hall bookings and accepted appointments
                   </p>
                 )}
                 {viewMode === 'history' && (
-                  <p className="text-blue-100 text-sm sm:text-base mt-1">
+                  <p className="text-blue-100 text-sm">
                     All accepted and rejected training hall bookings
                   </p>
                 )}
               </div>
-              <div className="flex gap-2 flex-wrap">
+              {/* Nav buttons — single straight line on the right */}
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setViewMode('calendar')}
-                  className={`relative px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg ${
+                  className={`relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all shadow-md whitespace-nowrap ${
                     viewMode === 'calendar'
-                      ? 'bg-white text-blue-600 hover:bg-blue-50 transform hover:scale-105'
+                      ? 'bg-white text-blue-600'
                       : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
                   }`}
                 >
-                  <span className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Calendar
-                  </span>
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Calendar
                   <CountBadge count={pendingCount} />
                 </button>
                 <button
                   onClick={() => setViewMode('booked')}
-                  className={`px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg ${
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all shadow-md whitespace-nowrap ${
                     viewMode === 'booked'
-                      ? 'bg-white text-green-600 hover:bg-green-50 transform hover:scale-105'
+                      ? 'bg-white text-blue-600'
                       : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
                   }`}
                 >
-                  <span className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Booked
-                  </span>
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Booked
                 </button>
                 <button
                   onClick={() => setViewMode('history')}
-                  className={`px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg ${
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all shadow-md whitespace-nowrap ${
                     viewMode === 'history'
-                      ? 'bg-white text-blue-600 hover:bg-blue-50 transform hover:scale-105'
+                      ? 'bg-white text-blue-600'
                       : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
                   }`}
                 >
-                  <span className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    History
-                  </span>
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  History
                 </button>
                 <button
                   onClick={() => router.push('/admin/user-management')}
-                  className="relative px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-violet-500 hover:bg-violet-400 text-white"
+                  className="relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all shadow-md whitespace-nowrap bg-violet-500 hover:bg-violet-400 text-white"
                 >
-                  <span className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Users
-                  </span>
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Users
                   <CountBadge count={pendingUserSignups} />
                 </button>
                 <button
                   onClick={handleSignOut}
-                  className="px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-red-600 hover:bg-red-700 text-white"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all shadow-md whitespace-nowrap bg-red-600 hover:bg-red-700 text-white"
                 >
-                  <span className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Sign Out
-                  </span>
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Sign Out
                 </button>
               </div>
             </div>
@@ -541,71 +545,70 @@ export default function AdminPage() {
 
         {/* Calendar View */}
         {viewMode === 'calendar' && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
-          {/* Calendar Navigation */}
-          <div className="flex justify-between items-center mb-6 sm:mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-700 rounded-xl p-4">
-            <button
-              onClick={() => navigateMonth('prev')}
-              className="px-4 py-2 text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-all shadow-md hover:shadow-lg font-medium flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span className="hidden sm:inline">Previous</span>
-            </button>
-            <h2 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white text-center flex items-center gap-3">
-              <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-            </h2>
-            <button
-              onClick={() => navigateMonth('next')}
-              className="px-4 py-2 text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-all shadow-md hover:shadow-lg font-medium flex items-center gap-2"
-            >
-              <span className="hidden sm:inline">Next</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
+            {/* Calendar Navigation */}
+            <div className="flex justify-between items-center mb-6 sm:mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-700 rounded-xl p-4">
+              <button
+                onClick={() => navigateMonth('prev')}
+                className="px-4 py-2 text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-all shadow-md hover:shadow-lg font-medium flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <span className="hidden sm:inline">Previous</span>
+              </button>
+              <h2 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white text-center flex items-center gap-3">
+                <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </h2>
+              <button
+                onClick={() => navigateMonth('next')}
+                className="px-4 py-2 text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-all shadow-md hover:shadow-lg font-medium flex items-center gap-2"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
 
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-2 sm:gap-3">
-            {/* Day Headers */}
-            {dayNames.map(day => (
-              <div key={day} className="text-center font-bold text-gray-700 dark:text-gray-300 py-3 text-sm sm:text-base bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-lg">
-                <span className="hidden sm:inline">{day}</span>
-                <span className="sm:hidden">{day.substring(0, 1)}</span>
-              </div>
-            ))}
+            {/* Calendar Grid */}
+            <div className="grid grid-cols-7 gap-2 sm:gap-3">
+              {/* Day Headers */}
+              {dayNames.map(day => (
+                <div key={day} className="text-center font-bold text-gray-700 dark:text-gray-300 py-3 text-sm sm:text-base bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-lg">
+                  <span className="hidden sm:inline">{day}</span>
+                  <span className="sm:hidden">{day.substring(0, 1)}</span>
+                </div>
+              ))}
 
-            {/* Calendar Days */}
-            {days.map((day, index) => {
-              const dayBookings = getBookingsForDate(day);
-              const isToday = day && day.toDateString() === new Date().toDateString();
-              const isPast = day && day < new Date() && !isToday;
+              {/* Calendar Days */}
+              {days.map((day, index) => {
+                const dayBookings = getBookingsForDate(day);
+                const isToday = day && day.toDateString() === new Date().toDateString();
+                const isPast = day && day < new Date() && !isToday;
 
-              // Helper function to check if time is AM (00:00-11:59) or PM (12:00-23:59)
-              const isAM = (time: string) => {
-                const [hours] = time.split(':');
-                const hour = parseInt(hours, 10);
-                return hour < 12;
-              };
+                // Helper function to check if time is AM (00:00-11:59) or PM (12:00-23:59)
+                const isAM = (time: string) => {
+                  const [hours] = time.split(':');
+                  const hour = parseInt(hours, 10);
+                  return hour < 12;
+                };
 
-              // Separate bookings into AM and PM
-              const amBookings = dayBookings.filter(booking => isAM(booking.startTime));
-              const pmBookings = dayBookings.filter(booking => !isAM(booking.startTime));
+                // Separate bookings into AM and PM
+                const amBookings = dayBookings.filter(booking => isAM(booking.startTime));
+                const pmBookings = dayBookings.filter(booking => !isAM(booking.startTime));
 
-              return (
-                <div
-                  key={index}
-                  className={`relative overflow-hidden min-h-[100px] sm:min-h-[140px] aspect-square border-2 rounded-xl p-1.5 sm:p-2.5 transition-all hover:shadow-lg ${
-                    day
-                      ? (() => {
+                return (
+                  <div
+                    key={index}
+                    className={`relative overflow-hidden min-h-[100px] sm:min-h-[140px] aspect-square border-2 rounded-xl p-1.5 sm:p-2.5 transition-all hover:shadow-lg ${day
+                        ? (() => {
                           if (isToday) return 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border-blue-400 dark:border-blue-600 shadow-md';
                           if (isPast) return 'bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 opacity-75';
-                          
+
                           // Pending requests — amber (not green; green = approved in Booked view)
                           if (amBookings.length > 0 && pmBookings.length > 0) {
                             return 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600';
@@ -614,245 +617,247 @@ export default function AdminPage() {
                           } else if (pmBookings.length > 0) {
                             return 'bg-[linear-gradient(135deg,transparent_50%,rgba(245,158,11,0.15)_50%)] dark:bg-[linear-gradient(135deg,rgba(55,65,81,0.5)_50%,rgba(245,158,11,0.22)_50%)] border-amber-300 dark:border-amber-600 bg-white dark:bg-gray-800';
                           }
-                          
+
                           return 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600';
                         })()
-                      : 'bg-transparent border-transparent'
-                  }`}
-                >
-                  {day && (
-                    <>
-                      <div
-                        className="absolute inset-0 pointer-events-none z-0 bg-[linear-gradient(135deg,transparent_49%,rgba(0,0,0,0.05)_50%,transparent_51%)] dark:bg-[linear-gradient(135deg,transparent_49%,rgba(255,255,255,0.05)_50%,transparent_51%)]"
-                        aria-hidden
-                      />
-                      <span className={`absolute top-1 left-1 text-[10px] sm:text-xs font-semibold z-10 ${amBookings.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                        AM
-                      </span>
-                      <span className={`absolute bottom-1 right-1 text-[10px] sm:text-xs font-semibold z-10 ${pmBookings.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                        PM
-                      </span>
+                        : 'bg-transparent border-transparent'
+                      }`}
+                  >
+                    {day && (
+                      <>
+                        <div
+                          className="absolute inset-0 pointer-events-none z-0 bg-[linear-gradient(135deg,transparent_49%,rgba(0,0,0,0.05)_50%,transparent_51%)] dark:bg-[linear-gradient(135deg,transparent_49%,rgba(255,255,255,0.05)_50%,transparent_51%)]"
+                          aria-hidden
+                        />
+                        <span className={`absolute top-1 left-1 text-[10px] sm:text-xs font-semibold z-10 ${amBookings.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                          AM
+                        </span>
+                        <span className={`absolute bottom-1 right-1 text-[10px] sm:text-xs font-semibold z-10 ${pmBookings.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                          PM
+                        </span>
 
-                      {/* Date number */}
-                      <div className={`absolute top-1 right-1 text-xs sm:text-sm font-medium z-10 ${
-                        isToday
-                          ? 'text-blue-700 dark:text-blue-300'
-                          : isPast
-                          ? 'text-gray-400 dark:text-gray-600'
-                          : 'text-gray-900 dark:text-gray-100'
-                      }`}>
-                        {day.getDate()}
-                      </div>
-
-                      {/* AM Bookings - Upper Left Triangle */}
-                      <div className="absolute top-0 left-0 w-1/2 h-1/2 overflow-hidden z-10 pointer-events-none">
-                        <div className="absolute top-0 left-0 w-full h-full flex flex-col items-start justify-start p-1 sm:p-2 space-y-0.5 sm:space-y-1 pointer-events-auto">
-                          {amBookings.slice(0, 2).map(booking => (
-                            <div
-                              key={booking.id}
-                              onClick={() => openBookingModal(booking)}
-                              className={`text-[8px] sm:text-[10px] ${getStatusColor(booking.status)} text-white px-1.5 sm:px-2 py-1 rounded-lg truncate cursor-pointer hover:opacity-90 hover:shadow-md max-w-full transition-all font-medium`}
-                              title={`${formatTime12Hour(booking.startTime)} - ${formatTime12Hour(booking.endTime)}: ${booking.eventTitle || booking.type}`}
-                            >
-                              <span className="hidden sm:inline">{formatTime12Hour(booking.startTime)} - {booking.eventTitle || booking.type}</span>
-                              <span className="sm:hidden">{formatTime12Hour(booking.startTime)}</span>
-                            </div>
-                          ))}
-                          {amBookings.length > 2 && (
-                            <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 px-1">
-                              +{amBookings.length - 2}
-                            </div>
-                          )}
+                        {/* Date number */}
+                        <div className={`absolute top-1 right-1 text-xs sm:text-sm font-medium z-10 ${isToday
+                            ? 'text-blue-700 dark:text-blue-300'
+                            : isPast
+                              ? 'text-gray-400 dark:text-gray-600'
+                              : 'text-gray-900 dark:text-gray-100'
+                          }`}>
+                          {day.getDate()}
                         </div>
-                      </div>
 
-                      {/* PM Bookings - Bottom Right Triangle */}
-                      <div className="absolute bottom-0 right-0 w-1/2 h-1/2 overflow-hidden z-10 pointer-events-none">
-                        <div className="absolute bottom-0 right-0 w-full h-full flex flex-col items-end justify-end p-1 sm:p-2 space-y-0.5 sm:space-y-1 pointer-events-auto">
-                          {pmBookings.slice(0, 2).map(booking => (
-                            <div
-                              key={booking.id}
-                              onClick={() => openBookingModal(booking)}
-                              className={`text-[8px] sm:text-[10px] ${getStatusColor(booking.status)} text-white px-1.5 sm:px-2 py-1 rounded-lg truncate cursor-pointer hover:opacity-90 hover:shadow-md max-w-full transition-all font-medium`}
-                              title={`${formatTime12Hour(booking.startTime)} - ${formatTime12Hour(booking.endTime)}: ${booking.eventTitle || booking.type}`}
-                            >
-                              <span className="hidden sm:inline">{formatTime12Hour(booking.startTime)} - {booking.eventTitle || booking.type}</span>
-                              <span className="sm:hidden">{formatTime12Hour(booking.startTime)}</span>
-                            </div>
-                          ))}
-                          {pmBookings.length > 2 && (
-                            <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 px-1">
-                              +{pmBookings.length - 2}
-                            </div>
-                          )}
+                        {/* AM Bookings - Upper Left Triangle */}
+                        <div className="absolute top-0 left-0 w-1/2 h-1/2 overflow-hidden z-10 pointer-events-none">
+                          <div className="absolute top-0 left-0 w-full h-full flex flex-col items-start justify-start p-1 sm:p-2 space-y-0.5 sm:space-y-1 pointer-events-auto">
+                            {amBookings.slice(0, 2).map(booking => (
+                              <div
+                                key={booking.id}
+                                onClick={() => openBookingModal(booking)}
+                                className={`text-[8px] sm:text-[10px] ${getStatusColor(booking.status)} text-white px-1.5 sm:px-2 py-1 rounded-lg truncate cursor-pointer hover:opacity-90 hover:shadow-md max-w-full transition-all font-medium`}
+                                title={`${formatTime12Hour(booking.startTime)} - ${formatTime12Hour(booking.endTime)}: ${booking.eventTitle || booking.type}`}
+                              >
+                                <span className="hidden sm:inline">{formatTime12Hour(booking.startTime)} - {booking.eventTitle || booking.type}</span>
+                                <span className="sm:hidden">{formatTime12Hour(booking.startTime)}</span>
+                              </div>
+                            ))}
+                            {amBookings.length > 2 && (
+                              <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 px-1">
+                                +{amBookings.length - 2}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
+
+                        {/* PM Bookings - Bottom Right Triangle */}
+                        <div className="absolute bottom-0 right-0 w-1/2 h-1/2 overflow-hidden z-10 pointer-events-none">
+                          <div className="absolute bottom-0 right-0 w-full h-full flex flex-col items-end justify-end p-1 sm:p-2 space-y-0.5 sm:space-y-1 pointer-events-auto">
+                            {pmBookings.slice(0, 2).map(booking => (
+                              <div
+                                key={booking.id}
+                                onClick={() => openBookingModal(booking)}
+                                className={`text-[8px] sm:text-[10px] ${getStatusColor(booking.status)} text-white px-1.5 sm:px-2 py-1 rounded-lg truncate cursor-pointer hover:opacity-90 hover:shadow-md max-w-full transition-all font-medium`}
+                                title={`${formatTime12Hour(booking.startTime)} - ${formatTime12Hour(booking.endTime)}: ${booking.eventTitle || booking.type}`}
+                              >
+                                <span className="hidden sm:inline">{formatTime12Hour(booking.startTime)} - {booking.eventTitle || booking.type}</span>
+                                <span className="sm:hidden">{formatTime12Hour(booking.startTime)}</span>
+                              </div>
+                            ))}
+                            {pmBookings.length > 2 && (
+                              <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 px-1">
+                                +{pmBookings.length - 2}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
         )}
 
         {/* Booked Calendar View - Shows Confirmed Bookings in Calendar Format */}
         {viewMode === 'booked' && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
-          {/* Calendar Navigation */}
-          <div className="flex justify-between items-center mb-6 sm:mb-8 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-700 rounded-xl p-4">
-            <button
-              onClick={() => navigateMonth('prev')}
-              className="px-4 py-2 text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-all shadow-md hover:shadow-lg font-medium flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span className="hidden sm:inline">Previous</span>
-            </button>
-            <h2 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white text-center flex items-center gap-3">
-              <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-            </h2>
-            <button
-              onClick={() => navigateMonth('next')}
-              className="px-4 py-2 text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-all shadow-md hover:shadow-lg font-medium flex items-center gap-2"
-            >
-              <span className="hidden sm:inline">Next</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Calendar grid — same layout as user hub: diagonal AM/PM, full cell when both; green = approved */}
-          <div className="grid grid-cols-7 gap-1 sm:gap-2">
-            {dayNames.map(day => (
-              <div
-                key={day}
-                className="text-center text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
+            {/* Calendar Navigation */}
+            <div className="flex justify-between items-center mb-6 sm:mb-8 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-700 rounded-xl p-4">
+              <button
+                onClick={() => navigateMonth('prev')}
+                className="px-4 py-2 text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-all shadow-md hover:shadow-lg font-medium flex items-center gap-2"
               >
-                <span className="hidden sm:inline">{day}</span>
-                <span className="sm:hidden">{day.substring(0, 1)}</span>
-              </div>
-            ))}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <span className="hidden sm:inline">Previous</span>
+              </button>
+              <h2 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white text-center flex items-center gap-3">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </h2>
+              <button
+                onClick={() => navigateMonth('next')}
+                className="px-4 py-2 text-sm sm:text-base text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-all shadow-md hover:shadow-lg font-medium flex items-center gap-2"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
 
-            {days.map((day, index) => {
-              const dayBookings = getConfirmedBookingsForDate(day);
-              const isToday = day && day.toDateString() === new Date().toDateString();
-              const isPast = day && day < new Date() && !isToday;
-
-              const isAM = (time: string) => {
-                if (!time) return true;
-                const [hours] = time.split(':');
-                return parseInt(hours, 10) < 12;
-              };
-              const amBookings = dayBookings.filter(b => isAM(b.startTime));
-              const pmBookings = dayBookings.filter(b => !isAM(b.startTime));
-              const hasAm = amBookings.length > 0;
-              const hasPm = pmBookings.length > 0;
-              const scheduled = dayBookings.length > 0;
-
-              let bgClass =
-                'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600';
-              if (day && scheduled) {
-                if (hasAm && hasPm) {
-                  bgClass =
-                    'bg-green-500 text-white font-bold border-2 border-white/20 shadow-sm';
-                } else if (hasAm) {
-                  bgClass =
-                    'bg-[linear-gradient(135deg,#22c55e_50%,transparent_50%)] dark:bg-[linear-gradient(135deg,#22c55e_50%,#374151_50%)] bg-gray-100 text-gray-900 dark:text-white font-bold border border-green-400 dark:border-green-700/50';
-                } else if (hasPm) {
-                  bgClass =
-                    'bg-[linear-gradient(135deg,transparent_50%,#22c55e_50%)] dark:bg-[linear-gradient(135deg,#374151_50%,#22c55e_50%)] bg-gray-100 text-gray-900 dark:text-white font-bold border border-green-400 dark:border-green-700/50';
-                }
-              } else if (day && isToday && !scheduled) {
-                bgClass = 'bg-blue-500 text-white ring-2 ring-blue-700 dark:ring-blue-400 border-0';
-              } else if (day && isPast && !scheduled) {
-                bgClass =
-                  'text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700';
-              } else if (day && !scheduled) {
-                bgClass =
-                  'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-600';
-              }
-
-              return (
+            {/* Calendar grid — same layout as user hub: diagonal AM/PM, full cell when both; green = approved */}
+            <div className="grid grid-cols-7 gap-1 sm:gap-2">
+              {dayNames.map(day => (
                 <div
-                  key={index}
-                  role="gridcell"
-                  onClick={() => day && scheduled && openDateModal(day)}
-                  className={`relative aspect-square overflow-hidden flex items-center justify-center rounded-lg text-xs sm:text-sm transition-all ${
-                    !day ? 'invisible' : bgClass
-                  } ${day && scheduled ? 'cursor-pointer hover:opacity-90' : ''}`}
-                  title={
-                    day
-                      ? scheduled
-                        ? hasAm && hasPm
-                          ? 'Approved: full day — tap for details'
-                          : hasAm
-                          ? 'Approved: AM — tap for details'
-                          : 'Approved: PM — tap for details'
-                        : isToday
-                        ? 'Today'
-                        : 'No approved booking'
-                      : undefined
-                  }
+                  key={day}
+                  className="text-center text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50"
                 >
-                  {day && (
-                    <>
-                      <span
-                        className={`relative z-10 ${
-                          scheduled && hasAm && hasPm ? 'drop-shadow-md text-white' : ''
-                        }`}
-                      >
-                        {day.getDate()}
-                      </span>
-                      {scheduled && (
-                        <>
-                          <span
-                            className={`absolute top-0.5 left-1 text-[8px] sm:text-[9px] font-bold ${
-                              hasAm ? 'text-white' : 'text-transparent'
-                            }`}
-                          >
-                            AM
-                          </span>
-                          <span
-                            className={`absolute bottom-0.5 right-1 text-[8px] sm:text-[9px] font-bold ${
-                              hasPm ? 'text-white' : 'text-transparent'
-                            }`}
-                          >
-                            PM
-                          </span>
-                        </>
-                      )}
-                    </>
-                  )}
+                  <span className="hidden sm:inline">{day}</span>
+                  <span className="sm:hidden">{day.substring(0, 1)}</span>
                 </div>
-              );
-            })}
-          </div>
+              ))}
 
-          <div className="flex flex-wrap gap-2 text-[10px] sm:text-xs bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl mt-4 border border-gray-100 dark:border-gray-700">
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm bg-gray-200 dark:bg-gray-600 border border-gray-300 dark:border-gray-500" />
-              Available
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm bg-[linear-gradient(135deg,#22c55e_50%,transparent_50%)] border border-gray-300 dark:border-gray-500" />
-              AM approved
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm bg-[linear-gradient(135deg,transparent_50%,#22c55e_50%)] border border-gray-300 dark:border-gray-500" />
-              PM approved
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm bg-green-500 border border-gray-200 dark:border-gray-600" />
-              Full day
-            </span>
+              {days.map((day, index) => {
+                const dayBookings = getConfirmedBookingsForDate(day);
+                const isToday = day && day.toDateString() === new Date().toDateString();
+                const isPast = day && day < new Date() && !isToday;
+
+                const isAM = (time: string) => {
+                  if (!time) return true;
+                  const [hours] = time.split(':');
+                  return parseInt(hours, 10) < 12;
+                };
+                const isPM = (time: string) => {
+                  if (!time) return false;
+                  const [hours] = time.split(':');
+                  return parseInt(hours, 10) >= 12;
+                };
+                // A single booking that starts AM and ends PM counts as whole day
+                const isWholeDay = dayBookings.some(b => isAM(b.startTime) && isPM(b.endTime));
+                const amBookings = dayBookings.filter(b => isAM(b.startTime));
+                const pmBookings = dayBookings.filter(b => !isAM(b.startTime));
+                const hasAm = amBookings.length > 0;
+                const hasPm = pmBookings.length > 0;
+                const scheduled = dayBookings.length > 0;
+
+                let bgClass =
+                  'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600';
+                if (day && scheduled) {
+                  if (isWholeDay || (hasAm && hasPm)) {
+                    bgClass =
+                      'bg-green-500 text-white font-bold border-2 border-white/20 shadow-sm';
+                  } else if (hasAm) {
+                    bgClass =
+                      'bg-[linear-gradient(135deg,#22c55e_50%,transparent_50%)] dark:bg-[linear-gradient(135deg,#22c55e_50%,#374151_50%)] bg-gray-100 text-gray-900 dark:text-white font-bold border border-green-400 dark:border-green-700/50';
+                  } else if (hasPm) {
+                    bgClass =
+                      'bg-[linear-gradient(135deg,transparent_50%,#22c55e_50%)] dark:bg-[linear-gradient(135deg,#374151_50%,#22c55e_50%)] bg-gray-100 text-gray-900 dark:text-white font-bold border border-green-400 dark:border-green-700/50';
+                  }
+                } else if (day && isToday && !scheduled) {
+                  bgClass = 'bg-blue-500 text-white ring-2 ring-blue-700 dark:ring-blue-400 border-0';
+                } else if (day && isPast && !scheduled) {
+                  bgClass =
+                    'text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700';
+                } else if (day && !scheduled) {
+                  bgClass =
+                    'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-green-400 dark:hover:border-green-600';
+                }
+
+                return (
+                  <div
+                    key={index}
+                    role="gridcell"
+                    onClick={() => day && scheduled && openDateModal(day)}
+                    className={`relative aspect-square overflow-hidden flex items-center justify-center rounded-lg text-xs sm:text-sm transition-all ${!day ? 'invisible' : bgClass
+                      } ${day && scheduled ? 'cursor-pointer hover:opacity-90' : ''}`}
+                    title={
+                      day
+                        ? scheduled
+                          ? (isWholeDay || (hasAm && hasPm))
+                            ? 'Approved: full day — tap for details'
+                            : hasAm
+                              ? 'Approved: AM — tap for details'
+                              : 'Approved: PM — tap for details'
+                          : isToday
+                            ? 'Today'
+                            : 'No approved booking'
+                        : undefined
+                    }
+                  >
+                    {day && (
+                      <>
+                        <span
+                          className={`relative z-10 ${scheduled && hasAm && hasPm ? 'drop-shadow-md text-white' : ''
+                            }`}
+                        >
+                          {day.getDate()}
+                        </span>
+                        {scheduled && (
+                          <>
+                            <span
+                              className={`absolute top-0.5 left-1 text-[8px] sm:text-[9px] font-bold ${hasAm ? 'text-white' : 'text-transparent'
+                                }`}
+                            >
+                              AM
+                            </span>
+                            <span
+                              className={`absolute bottom-0.5 right-1 text-[8px] sm:text-[9px] font-bold ${hasPm ? 'text-white' : 'text-transparent'
+                                }`}
+                            >
+                              PM
+                            </span>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-wrap gap-2 text-[10px] sm:text-xs bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl mt-4 border border-gray-100 dark:border-gray-700">
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-sm bg-gray-200 dark:bg-gray-600 border border-gray-300 dark:border-gray-500" />
+                Available
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-sm bg-[linear-gradient(135deg,#22c55e_50%,transparent_50%)] border border-gray-300 dark:border-gray-500" />
+                AM approved
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-sm bg-[linear-gradient(135deg,transparent_50%,#22c55e_50%)] border border-gray-300 dark:border-gray-500" />
+                PM approved
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-sm bg-green-500 border border-gray-200 dark:border-gray-600" />
+                Full day
+              </span>
+            </div>
           </div>
-        </div>
         )}
 
         {/* History View */}
@@ -935,11 +940,10 @@ export default function AdminPage() {
                         {historyBookings.map((booking, index) => (
                           <tr
                             key={booking.id}
-                            className={`group transition-all duration-300 ${
-                              index % 2 === 0 
-                                ? 'bg-white dark:bg-gray-800' 
+                            className={`group transition-all duration-300 ${index % 2 === 0
+                                ? 'bg-white dark:bg-gray-800'
                                 : 'bg-gray-50/50 dark:bg-gray-800/50'
-                            } hover:bg-gradient-to-r hover:from-blue-50 hover:via-indigo-50 hover:to-purple-50 dark:hover:from-gray-700/70 dark:hover:via-gray-700/70 dark:hover:to-gray-700/70 hover:shadow-lg hover:scale-[1.01]`}
+                              } hover:bg-gradient-to-r hover:from-blue-50 hover:via-indigo-50 hover:to-purple-50 dark:hover:from-gray-700/70 dark:hover:via-gray-700/70 dark:hover:to-gray-700/70 hover:shadow-lg hover:scale-[1.01]`}
                           >
                             <td className="py-5 px-6 text-gray-900 dark:text-white font-semibold">
                               <div className="flex items-center gap-3">
@@ -1344,11 +1348,28 @@ export default function AdminPage() {
                 </div>
               )}
 
+              {/* Admin Note (set when booking was accepted) */}
+              {selectedBooking.adminNote && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <div className="rounded-xl border border-green-200 dark:border-green-800/80 bg-gradient-to-br from-green-50 to-emerald-50/80 dark:from-green-950/40 dark:to-emerald-950/20 p-4 shadow-sm">
+                    <p className="text-[11px] font-bold text-green-700 dark:text-green-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Admin Note
+                    </p>
+                    <p className="text-sm text-green-900 dark:text-green-100 whitespace-pre-wrap leading-relaxed">
+                      {selectedBooking.adminNote}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               {(!selectedBooking.status || selectedBooking.status === 'pending') && (
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
-                    onClick={handleAcceptBooking}
+                    onClick={() => setShowAcceptModal(true)}
                     className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm sm:text-base"
                   >
                     Accept Booking
@@ -1399,6 +1420,86 @@ export default function AdminPage() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Accept booking — confirmation modal with optional note */}
+      {showModal && showAcceptModal && selectedBooking && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="accept-modal-title-training"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            onClick={() => { if (!acceptSubmitting) { setShowAcceptModal(false); setAcceptNote(''); } }}
+            aria-label="Close dialog"
+          />
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl ring-1 ring-green-200/50 dark:ring-green-900/50 bg-white dark:bg-gray-900">
+            <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-green-700 px-6 py-5 text-white">
+              <div className="flex items-start gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 id="accept-modal-title-training" className="text-lg font-bold leading-tight">
+                    Confirm this booking?
+                  </h3>
+                  <p className="mt-1 text-sm text-green-100">
+                    You can optionally add a note for the requester (e.g. reminders, instructions).
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label htmlFor="accept-note-training" className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                  Note for requester <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  id="accept-note-training"
+                  rows={4}
+                  value={acceptNote}
+                  onChange={e => setAcceptNote(e.target.value)}
+                  disabled={acceptSubmitting}
+                  placeholder=""
+                  className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/80 px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition-shadow resize-y min-h-[100px] disabled:opacity-60"
+                />
+              </div>
+              <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={() => { if (!acceptSubmitting) { setShowAcceptModal(false); setAcceptNote(''); } }}
+                  disabled={acceptSubmitting}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAcceptBooking}
+                  disabled={acceptSubmitting}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold shadow-lg shadow-green-500/25 hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {acceptSubmitting ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Confirming…
+                    </>
+                  ) : (
+                    'Confirm Booking'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1514,11 +1615,10 @@ export default function AdminPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-4 sm:p-6">
             <div className="flex items-start gap-3 sm:gap-4">
               {/* Icon */}
-              <div className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center ${
-                statusModalData.type === 'success'
+              <div className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center ${statusModalData.type === 'success'
                   ? 'bg-green-100 dark:bg-green-900/30'
                   : 'bg-red-100 dark:bg-red-900/30'
-              }`}>
+                }`}>
                 {statusModalData.type === 'success' ? (
                   <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1529,14 +1629,13 @@ export default function AdminPage() {
                   </svg>
                 )}
               </div>
-              
+
               {/* Content */}
               <div className="flex-1">
-                <h3 className={`text-lg sm:text-xl font-bold mb-2 ${
-                  statusModalData.type === 'success'
+                <h3 className={`text-lg sm:text-xl font-bold mb-2 ${statusModalData.type === 'success'
                     ? 'text-green-900 dark:text-green-100'
                     : 'text-red-900 dark:text-red-100'
-                }`}>
+                  }`}>
                   {statusModalData.title}
                 </h3>
                 <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4">
@@ -1544,11 +1643,10 @@ export default function AdminPage() {
                 </p>
                 <button
                   onClick={closeStatusModal}
-                  className={`w-full px-4 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
-                    statusModalData.type === 'success'
+                  className={`w-full px-4 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${statusModalData.type === 'success'
                       ? 'bg-green-600 text-white hover:bg-green-700'
                       : 'bg-red-600 text-white hover:bg-red-700'
-                  }`}
+                    }`}
                 >
                   OK
                 </button>
@@ -1591,7 +1689,7 @@ export default function AdminPage() {
 
             {(() => {
               const dateBookings = getConfirmedBookingsForDate(selectedDate);
-              
+
               if (dateBookings.length === 0) {
                 return (
                   <div className="text-center py-12">

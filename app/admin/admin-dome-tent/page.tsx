@@ -28,6 +28,9 @@ export default function AdminDomeTentPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectError, setRejectError] = useState('');
   const [rejectSubmitting, setRejectSubmitting] = useState(false);
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [acceptNote, setAcceptNote] = useState('');
+  const [acceptSubmitting, setAcceptSubmitting] = useState(false);
   const [pendingUserSignups, setPendingUserSignups] = useState(0);
   const router = useRouter();
 
@@ -146,6 +149,8 @@ export default function AdminDomeTentPage() {
     setShowRejectModal(false);
     setRejectReason('');
     setRejectError('');
+    setShowAcceptModal(false);
+    setAcceptNote('');
   };
 
   const openRejectModal = (mode: 'rejectPending' | 'cancelConfirmed') => {
@@ -174,9 +179,12 @@ export default function AdminDomeTentPage() {
 
   const handleAcceptBooking = async () => {
     if (!selectedBooking?.id) return;
+    setAcceptSubmitting(true);
     try {
-      // Update booking status first
-      await updateBookingStatus(selectedBooking.id, 'confirmed');
+      // Update booking status with optional admin note
+      await updateBookingStatus(selectedBooking.id, 'confirmed', {
+        adminNote: acceptNote.trim() || undefined,
+      });
       
       // Send confirmation email if email is available
       if (selectedBooking.clientEmail) {
@@ -188,7 +196,7 @@ export default function AdminDomeTentPage() {
             },
             body: JSON.stringify({
               to: selectedBooking.clientEmail,
-              booking: selectedBooking,
+              booking: { ...selectedBooking, adminNote: acceptNote.trim() || undefined },
             }),
           });
 
@@ -223,6 +231,8 @@ export default function AdminDomeTentPage() {
         });
       }
       
+      setShowAcceptModal(false);
+      setAcceptNote('');
       closeModal();
       setShowStatusModal(true);
     } catch (error) {
@@ -233,6 +243,8 @@ export default function AdminDomeTentPage() {
         message: 'Failed to confirm booking. Please try again.',
       });
       setShowStatusModal(true);
+    } finally {
+      setAcceptSubmitting(false);
     }
   };
 
@@ -749,6 +761,13 @@ export default function AdminDomeTentPage() {
                 const [hours] = time.split(':');
                 return parseInt(hours, 10) < 12;
               };
+              const isPM = (time: string) => {
+                if (!time) return false;
+                const [hours] = time.split(':');
+                return parseInt(hours, 10) >= 12;
+              };
+              // A single booking that starts AM and ends PM counts as whole day
+              const isWholeDay = dayBookings.some(b => isAM(b.startTime) && isPM(b.endTime));
               const amBookings = dayBookings.filter(b => isAM(b.startTime));
               const pmBookings = dayBookings.filter(b => !isAM(b.startTime));
               const hasAm = amBookings.length > 0;
@@ -758,7 +777,7 @@ export default function AdminDomeTentPage() {
               let bgClass =
                 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600';
               if (day && scheduled) {
-                if (hasAm && hasPm) {
+                if (isWholeDay || (hasAm && hasPm)) {
                   bgClass =
                     'bg-green-500 text-white font-bold border-2 border-white/20 shadow-sm';
                 } else if (hasAm) {
@@ -789,7 +808,7 @@ export default function AdminDomeTentPage() {
                   title={
                     day
                       ? scheduled
-                        ? hasAm && hasPm
+                        ? (isWholeDay || (hasAm && hasPm))
                           ? 'Approved: full day — tap for details'
                           : hasAm
                           ? 'Approved: AM — tap for details'
@@ -804,7 +823,7 @@ export default function AdminDomeTentPage() {
                     <>
                       <span
                         className={`relative z-10 ${
-                          scheduled && hasAm && hasPm ? 'drop-shadow-md text-white' : ''
+                          scheduled && (isWholeDay || (hasAm && hasPm)) ? 'drop-shadow-md text-white' : ''
                         }`}
                       >
                         {day.getDate()}
@@ -1277,11 +1296,28 @@ export default function AdminDomeTentPage() {
                 </div>
               )}
 
+              {/* Admin Note (set when booking was accepted) */}
+              {selectedBooking.adminNote && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <div className="rounded-xl border border-green-200 dark:border-green-800/80 bg-gradient-to-br from-green-50 to-emerald-50/80 dark:from-green-950/40 dark:to-emerald-950/20 p-4 shadow-sm">
+                    <p className="text-[11px] font-bold text-green-700 dark:text-green-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Admin Note
+                    </p>
+                    <p className="text-sm text-green-900 dark:text-green-100 whitespace-pre-wrap leading-relaxed">
+                      {selectedBooking.adminNote}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               {(!selectedBooking.status || selectedBooking.status === 'pending') && (
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
-                    onClick={handleAcceptBooking}
+                    onClick={() => setShowAcceptModal(true)}
                     className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm sm:text-base"
                   >
                     Accept Booking
@@ -1332,6 +1368,86 @@ export default function AdminDomeTentPage() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Accept booking — confirmation modal with optional note */}
+      {showModal && showAcceptModal && selectedBooking && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="accept-modal-title-dome"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            onClick={() => { if (!acceptSubmitting) { setShowAcceptModal(false); setAcceptNote(''); } }}
+            aria-label="Close dialog"
+          />
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl ring-1 ring-green-200/50 dark:ring-green-900/50 bg-white dark:bg-gray-900">
+            <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-green-700 px-6 py-5 text-white">
+              <div className="flex items-start gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 id="accept-modal-title-dome" className="text-lg font-bold leading-tight">
+                    Confirm this booking?
+                  </h3>
+                  <p className="mt-1 text-sm text-green-100">
+                    You can optionally add a note for the requester (e.g. reminders, instructions).
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label htmlFor="accept-note-dome" className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                  Note for requester <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  id="accept-note-dome"
+                  rows={4}
+                  value={acceptNote}
+                  onChange={e => setAcceptNote(e.target.value)}
+                  disabled={acceptSubmitting}
+                  placeholder=""
+                  className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/80 px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 outline-none transition-shadow resize-y min-h-[100px] disabled:opacity-60"
+                />
+              </div>
+              <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={() => { if (!acceptSubmitting) { setShowAcceptModal(false); setAcceptNote(''); } }}
+                  disabled={acceptSubmitting}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAcceptBooking}
+                  disabled={acceptSubmitting}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold shadow-lg shadow-green-500/25 hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {acceptSubmitting ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Confirming…
+                    </>
+                  ) : (
+                    'Confirm Booking'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

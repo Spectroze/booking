@@ -50,7 +50,7 @@ function TrainingHallContent() {
     tables: false,
     tablesQuantity: '',
     whiteboard: false,
-    soundSystem: false,
+
     flagStand: false,
     chairs: false,
     chairsQuantity: '',
@@ -229,7 +229,7 @@ function TrainingHallContent() {
           tables: formData.tables,
           tablesQuantity: formData.tablesQuantity ? parseInt(formData.tablesQuantity) : undefined,
           whiteboard: formData.whiteboard,
-          soundSystem: formData.soundSystem,
+
           flagStand: formData.flagStand,
           chairs: formData.chairs,
           chairsQuantity: formData.chairsQuantity ? parseInt(formData.chairsQuantity) : undefined,
@@ -823,18 +823,6 @@ function TrainingHallContent() {
                   </label>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="soundSystem"
-                    checked={formData.soundSystem}
-                    onChange={(e) => setFormData({ ...formData, soundSystem: e.target.checked })}
-                    className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                  />
-                  <label htmlFor="soundSystem" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Sound System
-                  </label>
-                </div>
 
                 <div className="flex items-center gap-3">
                   <input

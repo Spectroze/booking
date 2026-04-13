@@ -70,6 +70,8 @@ export interface Booking {
   status?: 'pending' | 'confirmed' | 'cancelled';
   /** Set when admin rejects (cancels) a pending booking */
   rejectionReason?: string;
+  /** Optional note from admin when accepting a booking */
+  adminNote?: string;
   createdAt?: Date;
 }
 
@@ -190,22 +192,35 @@ export const subscribeToBookings = (
   return unsubscribe;
 };
 
-// Update booking status (optional rejectionReason when status is cancelled)
+// Update booking status (optional rejectionReason when status is cancelled, optional adminNote when confirmed)
 export const updateBookingStatus = async (
   bookingId: string,
   status: 'pending' | 'confirmed' | 'cancelled',
-  options?: { rejectionReason?: string }
+  options?: { rejectionReason?: string; adminNote?: string }
 ): Promise<void> => {
   const bookingRef = doc(db, 'bookings', bookingId);
   if (status === 'cancelled') {
     await updateDoc(bookingRef, {
       status,
       rejectionReason: options?.rejectionReason?.trim() ?? '',
+      adminNote: deleteField(),
     });
+  } else if (status === 'confirmed') {
+    const update: Record<string, unknown> = {
+      status,
+      rejectionReason: deleteField(),
+    };
+    if (options?.adminNote?.trim()) {
+      update.adminNote = options.adminNote.trim();
+    } else {
+      update.adminNote = deleteField();
+    }
+    await updateDoc(bookingRef, update);
   } else {
     await updateDoc(bookingRef, {
       status,
       rejectionReason: deleteField(),
+      adminNote: deleteField(),
     });
   }
 };
