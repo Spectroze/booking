@@ -4,7 +4,11 @@ import nodemailer from 'nodemailer';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { to, booking } = body;
+    const { to, booking, acceptReason } = body as {
+      to?: string;
+      booking?: Record<string, any>;
+      acceptReason?: string;
+    };
 
     // Validate required fields
     if (!to || !booking) {
@@ -35,7 +39,43 @@ export async function POST(request: NextRequest) {
       });
     };
 
+    const escapeHtml = (value: string) =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    const normalizeLineBreaks = (value: string) => escapeHtml(value).replace(/\r?\n/g, '<br />');
+
+    const getAdminNote = (bookingData: any, acceptReasonValue?: string): string => {
+      if (typeof acceptReasonValue === 'string' && acceptReasonValue.trim()) {
+        return acceptReasonValue.trim();
+      }
+
+      const candidateFields = [
+        bookingData.adminNote,
+        bookingData.adminNotes,
+        bookingData.acceptNote,
+        bookingData.acceptNotes,
+        bookingData.notes,
+        bookingData.note,
+        bookingData.reason,
+      ];
+
+      for (const field of candidateFields) {
+        if (typeof field === 'string' && field.trim()) {
+          return field.trim();
+        }
+      }
+
+      return '';
+    };
+
     const venueType = booking.type === 'dome-tent' ? 'Dome Tent' : 'Training Hall';
+    const adminNote = getAdminNote(booking, acceptReason);
+    const safeAdminNoteHtml = adminNote ? normalizeLineBreaks(adminNote) : '';
     
     let equipmentList = '';
     if (booking.equipmentNeeded) {
@@ -68,6 +108,7 @@ export async function POST(request: NextRequest) {
             .section { margin-bottom: 20px; }
             .label { font-weight: bold; color: #555; }
             .value { margin-top: 5px; }
+            .reason-box { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0; }
             .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
             .status-badge { display: inline-block; padding: 5px 15px; background-color: #4CAF50; color: white; border-radius: 20px; font-weight: bold; }
           </style>
@@ -115,6 +156,13 @@ export async function POST(request: NextRequest) {
               </div>
               ` : ''}
 
+              ${adminNote ? `
+              <div class="reason-box" style="background:#f0fdf4;border-left:4px solid #16a34a;padding:16px;margin:20px 0;border-radius:0 8px 8px 0;">
+                <p style="margin:0 0 8px;font-weight:bold;color:#166534;">Admin notes:</p>
+                <p style="margin:0;color:#1f2937;">${safeAdminNoteHtml}</p>
+              </div>
+              ` : ''}
+
               <div class="section">
                 <p>Please arrive on time for your scheduled event. If you have any questions or need to make changes, please contact us as soon as possible.</p>
                 <p>Thank you for choosing our facilities!</p>
@@ -144,6 +192,7 @@ ${booking.expectedNumberOfParticipants ? `Expected Participants: ${booking.expec
 ${booking.requestingOffice ? `Requesting Office: ${booking.requestingOffice}\n` : ''}${booking.mobileNo ? `Mobile No.: ${booking.mobileNo}\n` : ''}
 ${equipmentList !== 'None' ? `Equipment and Services: ${equipmentList}\n` : ''}
 ${booking.additionalNotes ? `Additional Notes: ${booking.additionalNotes}\n` : ''}
+${adminNote ? `Admin Note: ${adminNote}\n` : ''}
 
 Please arrive on time for your scheduled event. If you have any questions or need to make changes, please contact us as soon as possible.
 

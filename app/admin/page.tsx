@@ -179,11 +179,12 @@ export default function AdminPage() {
 
   const handleAcceptBooking = async () => {
     if (!selectedBooking?.id) return;
+    const trimmedAcceptNote = acceptNote.trim();
     setAcceptSubmitting(true);
     try {
       // Update booking status with optional admin note
       await updateBookingStatus(selectedBooking.id, 'confirmed', {
-        adminNote: acceptNote.trim() || undefined,
+        adminNote: trimmedAcceptNote || undefined,
       });
 
       // Send confirmation email if email is available
@@ -196,7 +197,8 @@ export default function AdminPage() {
             },
             body: JSON.stringify({
               to: selectedBooking.clientEmail,
-              booking: { ...selectedBooking, adminNote: acceptNote.trim() || undefined },
+              booking: { ...selectedBooking, adminNote: trimmedAcceptNote || undefined },
+              acceptReason: trimmedAcceptNote || undefined,
             }),
           });
 
