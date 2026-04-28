@@ -274,7 +274,7 @@ export default function UserManagementPage() {
 
   if (isCheckingAccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">Checking access...</p>
@@ -286,7 +286,7 @@ export default function UserManagementPage() {
   if (!isAuthorized) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 p-2 sm:p-4 md:p-8">
+    <div className="min-h-screen bg-white p-2 sm:p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
 
         {/* Toast */}
@@ -309,7 +309,7 @@ export default function UserManagementPage() {
 
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 dark:from-violet-700 dark:via-purple-700 dark:to-indigo-700 rounded-2xl shadow-xl p-6 sm:p-8 mb-6">
+          <div className="bg-gradient-to-r from-[#F9DC5C] via-[#FAE588] to-[#FCEFB4] dark:from-[#F9DC5C] dark:via-[#FAE588] dark:to-[#FCEFB4] rounded-2xl shadow-xl p-6 sm:p-8 mb-6 border border-[#FDF4CB]">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div>
                 <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center gap-3">
@@ -328,7 +328,7 @@ export default function UserManagementPage() {
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => router.back()}
-                  className="px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm"
+                  className="px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-[#FFF8DB] text-amber-950 hover:bg-[#FFF3C4] border border-[#FCEFB4]"
                 >
                   <span className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -339,7 +339,7 @@ export default function UserManagementPage() {
                 </button>
                 <button
                   onClick={loadUsers}
-                  className="px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm"
+                  className="px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-[#FFF8DB] text-amber-950 hover:bg-[#FFF3C4] border border-[#FCEFB4]"
                 >
                   <span className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -365,7 +365,7 @@ export default function UserManagementPage() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5 border-l-4 border-indigo-500 hover:shadow-xl transition-shadow">
+            <div className="bg-[#FDF8E1] dark:bg-[#FDF8E1] rounded-xl shadow-lg p-5 border-l-4 border-[#F9DC5C] hover:shadow-xl transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Users</p>
@@ -380,7 +380,7 @@ export default function UserManagementPage() {
             </div>
             <div
               onClick={() => setStatusFilter('pending')}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5 border-l-4 border-amber-500 hover:shadow-xl transition-all cursor-pointer hover:scale-105"
+              className="bg-[#FDF8E1] dark:bg-[#FDF8E1] rounded-xl shadow-lg p-5 border-l-4 border-[#FAE588] hover:shadow-xl transition-all cursor-pointer hover:scale-105"
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -396,7 +396,7 @@ export default function UserManagementPage() {
             </div>
             <div
               onClick={() => setStatusFilter('approved')}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5 border-l-4 border-emerald-500 hover:shadow-xl transition-all cursor-pointer hover:scale-105"
+              className="bg-[#FDF8E1] dark:bg-[#FDF8E1] rounded-xl shadow-lg p-5 border-l-4 border-[#FCEFB4] hover:shadow-xl transition-all cursor-pointer hover:scale-105"
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -412,7 +412,7 @@ export default function UserManagementPage() {
             </div>
             <div
               onClick={() => setStatusFilter('declined')}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5 border-l-4 border-red-500 hover:shadow-xl transition-all cursor-pointer hover:scale-105"
+              className="bg-[#FDF8E1] dark:bg-[#FDF8E1] rounded-xl shadow-lg p-5 border-l-4 border-[#FDF4CB] hover:shadow-xl transition-all cursor-pointer hover:scale-105"
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -430,7 +430,7 @@ export default function UserManagementPage() {
         </div>
 
         {/* Table Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div className="bg-[#FDF8E1] dark:bg-[#FDF8E1] rounded-2xl shadow-xl border border-[#FDF4CB] dark:border-[#FDF4CB] overflow-hidden">
           {/* Search & Filter Bar */}
           <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -800,14 +800,14 @@ export default function UserManagementPage() {
           >
             <button
               type="button"
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+              className="absolute inset-0 bg-black/45 transition-opacity"
               onClick={closeDeleteModal}
               aria-label="Close dialog"
             />
             <div className="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl ring-1 ring-red-200/50 dark:ring-red-900/50 bg-white dark:bg-gray-900">
               <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 px-6 py-5 text-white">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
                     <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
                     </svg>

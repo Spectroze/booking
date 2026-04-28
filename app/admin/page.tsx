@@ -413,7 +413,7 @@ export default function AdminPage() {
 
   if (isCheckingAccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">Checking access...</p>
@@ -425,24 +425,24 @@ export default function AdminPage() {
   if (!isAuthorized) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 p-2 sm:p-4 md:p-8">
+    <div className="min-h-screen bg-white p-2 sm:p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header with Gradient */}
         <div className="mb-6 sm:mb-8">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 rounded-2xl shadow-xl p-6 sm:p-8 mb-6">
+          <div className="bg-gradient-to-r from-[#F9DC5C] via-[#FAE588] to-[#FCEFB4] dark:from-[#F9DC5C] dark:via-[#FAE588] dark:to-[#FCEFB4] rounded-2xl shadow-xl p-6 sm:p-8 mb-6 border border-[#FDF4CB]">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div>
                 <button
                   type="button"
                   onClick={() => router.push('/admin/select-dashboard')}
-                  className="inline-flex items-center gap-2 text-blue-100 hover:text-white hover:bg-white/10 rounded-lg px-3 py-2 transition-colors mb-3"
+                  className="inline-flex items-center gap-2 text-amber-900 hover:text-amber-950 hover:bg-white/40 rounded-lg px-3 py-2 transition-colors mb-3"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                   Back to Dashboard Selection
                 </button>
-                <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center gap-3">
+                <h1 className="text-3xl sm:text-4xl font-bold text-amber-950 mb-2 flex items-center gap-3">
                   {viewMode === 'calendar' && (
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -461,31 +461,31 @@ export default function AdminPage() {
                   {viewMode === 'calendar' ? 'Training Hall Booking Calendar' : viewMode === 'booked' ? 'Training Hall Booked Calendar' : 'Training Hall Booking History'}
                 </h1>
                 {viewMode === 'calendar' && (
-                  <p className="text-blue-100 text-sm sm:text-base mt-1">
+                  <p className="text-amber-900/80 text-sm sm:text-base mt-1">
                     {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()} - Pending Training Hall Appointments
                   </p>
                 )}
                 {viewMode === 'booked' && (
-                  <p className="text-blue-100 text-sm sm:text-base mt-1">
+                  <p className="text-amber-900/80 text-sm sm:text-base mt-1">
                     All confirmed training hall bookings and accepted appointments
                   </p>
                 )}
                 {viewMode === 'history' && (
-                  <p className="text-blue-100 text-sm sm:text-base mt-1">
+                  <p className="text-amber-900/80 text-sm sm:text-base mt-1">
                     All accepted and rejected training hall bookings
                   </p>
                 )}
               </div>
-              <div className="flex gap-2 flex-wrap">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 w-full xl:w-auto xl:min-w-[760px]">
                 <button
                   onClick={() => setViewMode('calendar')}
-                  className={`relative px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg ${
+                  className={`relative w-full justify-center px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg inline-flex items-center ${
                     viewMode === 'calendar'
                       ? 'bg-white text-blue-600 hover:bg-blue-50 transform hover:scale-105'
-                      : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
+                      : 'bg-[#FFF8DB] text-amber-950 hover:bg-[#FFF3C4] border border-[#FCEFB4]'
                   }`}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center justify-center gap-2 w-full">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
@@ -495,13 +495,13 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={() => setViewMode('booked')}
-                  className={`px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg ${
+                  className={`w-full justify-center px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg inline-flex items-center ${
                     viewMode === 'booked'
                       ? 'bg-white text-green-600 hover:bg-green-50 transform hover:scale-105'
-                      : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
+                      : 'bg-[#FFF8DB] text-amber-950 hover:bg-[#FFF3C4] border border-[#FCEFB4]'
                   }`}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center justify-center gap-2 w-full">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -510,13 +510,13 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={() => setViewMode('history')}
-                  className={`px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg ${
+                  className={`w-full justify-center px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg inline-flex items-center ${
                     viewMode === 'history'
                       ? 'bg-white text-blue-600 hover:bg-blue-50 transform hover:scale-105'
-                      : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
+                      : 'bg-[#FFF8DB] text-amber-950 hover:bg-[#FFF3C4] border border-[#FCEFB4]'
                   }`}
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center justify-center gap-2 w-full">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -525,9 +525,9 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={() => router.push('/admin/user-management')}
-                  className="relative px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-violet-500 hover:bg-violet-400 text-white"
+                  className="relative w-full justify-center px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-violet-500 hover:bg-violet-400 text-white inline-flex items-center"
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center justify-center gap-2 w-full">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -537,9 +537,9 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={handleSignOut}
-                  className="px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-red-600 hover:bg-red-700 text-white"
+                  className="w-full justify-center px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-red-600 hover:bg-red-700 text-white inline-flex items-center"
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center justify-center gap-2 w-full">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
@@ -552,40 +552,64 @@ export default function AdminPage() {
 
           {/* Statistics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5 border-l-4 border-yellow-500 hover:shadow-xl transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{pendingCount}</p>
+            <div className="relative overflow-hidden rounded-2xl border border-amber-300/25 bg-gradient-to-br from-slate-600 via-slate-500 to-slate-700 p-5 shadow-[0_10px_30px_rgba(71,85,105,0.28)] ring-1 ring-white/15 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(71,85,105,0.34)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.22),_transparent_42%)]" />
+              <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-amber-300 via-yellow-400 to-amber-500" />
+              <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-amber-300/20 blur-3xl" />
+              <div className="relative flex items-start justify-between gap-4">
+                <div className="space-y-3">
+                  <span className="inline-flex items-center rounded-full border border-amber-200/30 bg-amber-300/18 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-50">
+                    Pending
+                  </span>
+                  <div>
+                    <p className="text-3xl font-bold tracking-tight text-white sm:text-4xl">{pendingCount}</p>
+                    <p className="mt-1 text-sm text-slate-100/85">Awaiting admin review</p>
+                  </div>
                 </div>
-                <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-full">
-                  <svg className="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-200/30 bg-amber-300/15 shadow-inner shadow-white/10 backdrop-blur-[2px]">
+                  <svg className="h-6 w-6 text-[#F9DC5C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5 border-l-4 border-green-500 hover:shadow-xl transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Confirmed</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{confirmedCount}</p>
+            <div className="relative overflow-hidden rounded-2xl border border-emerald-300/25 bg-gradient-to-br from-slate-600 via-slate-500 to-slate-700 p-5 shadow-[0_10px_30px_rgba(71,85,105,0.28)] ring-1 ring-white/15 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(71,85,105,0.34)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.22),_transparent_42%)]" />
+              <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-emerald-300 via-emerald-400 to-teal-500" />
+              <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-emerald-300/20 blur-3xl" />
+              <div className="relative flex items-start justify-between gap-4">
+                <div className="space-y-3">
+                  <span className="inline-flex items-center rounded-full border border-emerald-200/30 bg-emerald-300/18 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50">
+                    Confirmed
+                  </span>
+                  <div>
+                    <p className="text-3xl font-bold tracking-tight text-white sm:text-4xl">{confirmedCount}</p>
+                    <p className="mt-1 text-sm text-slate-100/85">Approved reservations</p>
+                  </div>
                 </div>
-                <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full">
-                  <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-200/30 bg-emerald-300/15 shadow-inner shadow-white/10 backdrop-blur-[2px]">
+                  <svg className="h-6 w-6 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-5 border-l-4 border-red-500 hover:shadow-xl transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Cancelled</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{cancelledCount}</p>
+            <div className="relative overflow-hidden rounded-2xl border border-rose-300/25 bg-gradient-to-br from-slate-600 via-slate-500 to-slate-700 p-5 shadow-[0_10px_30px_rgba(71,85,105,0.28)] ring-1 ring-white/15 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(71,85,105,0.34)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.22),_transparent_42%)]" />
+              <div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-rose-300 via-rose-400 to-pink-500" />
+              <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-rose-300/20 blur-3xl" />
+              <div className="relative flex items-start justify-between gap-4">
+                <div className="space-y-3">
+                  <span className="inline-flex items-center rounded-full border border-rose-200/30 bg-rose-300/18 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-rose-50">
+                    Cancelled
+                  </span>
+                  <div>
+                    <p className="text-3xl font-bold tracking-tight text-white sm:text-4xl">{cancelledCount}</p>
+                    <p className="mt-1 text-sm text-slate-100/85">Declined or removed</p>
+                  </div>
                 </div>
-                <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-full">
-                  <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-rose-200/30 bg-rose-300/15 shadow-inner shadow-white/10 backdrop-blur-[2px]">
+                  <svg className="h-6 w-6 text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
@@ -596,7 +620,7 @@ export default function AdminPage() {
 
         {/* Calendar View */}
         {viewMode === 'calendar' && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
+          <div className="bg-[#FDF8E1] dark:bg-[#FDF8E1] rounded-2xl shadow-xl p-4 sm:p-6 border border-[#FDF4CB] dark:border-[#FDF4CB]">
             {/* Calendar Navigation */}
             <div className="flex justify-between items-center mb-6 sm:mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-700 rounded-xl p-4">
               <button
@@ -629,7 +653,7 @@ export default function AdminPage() {
             <div className="grid grid-cols-7 gap-2 sm:gap-3">
               {/* Day Headers */}
               {dayNames.map(day => (
-                <div key={day} className="text-center font-bold text-gray-700 dark:text-gray-300 py-3 text-sm sm:text-base bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-lg">
+                <div key={day} className="text-center font-bold text-white py-3 text-sm sm:text-base bg-gray-500 rounded-lg">
                   <span className="hidden sm:inline">{day}</span>
                   <span className="sm:hidden">{day.substring(0, 1)}</span>
                 </div>
@@ -751,7 +775,7 @@ export default function AdminPage() {
 
         {/* Booked Calendar View - Shows Confirmed Bookings in Calendar Format */}
         {viewMode === 'booked' && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
+          <div className="bg-[#FDF8E1] dark:bg-[#FDF8E1] rounded-2xl shadow-xl p-4 sm:p-6 border border-[#FDF4CB] dark:border-[#FDF4CB]">
             {/* Calendar Navigation */}
             <div className="flex justify-between items-center mb-6 sm:mb-8 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-700 rounded-xl p-4">
               <button
@@ -913,7 +937,7 @@ export default function AdminPage() {
 
         {/* History View */}
         {viewMode === 'history' && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
+          <div className="bg-[#FDF8E1] dark:bg-[#FDF8E1] rounded-2xl shadow-xl p-4 sm:p-6 border border-[#FDF4CB] dark:border-[#FDF4CB]">
             {historyBookings.length === 0 ? (
               <div className="text-center py-16">
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-4">
@@ -931,7 +955,7 @@ export default function AdminPage() {
             ) : (
               <>
                 {/* Desktop Table View */}
-                <div className="hidden xl:block overflow-x-auto rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <div className="hidden xl:block overflow-x-auto rounded-2xl shadow-2xl border border-[#FDF4CB] dark:border-[#FDF4CB] bg-[#FDF8E1] dark:bg-[#FDF8E1]">
                   <div className="overflow-hidden rounded-2xl">
                     <table className="w-full">
                       <thead>
@@ -1516,14 +1540,14 @@ export default function AdminPage() {
         >
           <button
             type="button"
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            className="absolute inset-0 bg-black/45 transition-opacity"
             onClick={closeDeleteModal}
             aria-label="Close dialog"
           />
           <div className="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl ring-1 ring-red-200/50 dark:ring-red-900/50 bg-white dark:bg-gray-900">
             <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 px-6 py-5 text-white">
               <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
                   </svg>
@@ -1576,14 +1600,14 @@ export default function AdminPage() {
         >
           <button
             type="button"
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            className="absolute inset-0 bg-black/45 transition-opacity"
             onClick={() => { if (!acceptSubmitting) { setShowAcceptModal(false); setAcceptNote(''); } }}
             aria-label="Close dialog"
           />
           <div className="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl ring-1 ring-green-200/50 dark:ring-green-900/50 bg-white dark:bg-gray-900">
             <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-green-700 px-6 py-5 text-white">
               <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -1656,14 +1680,14 @@ export default function AdminPage() {
         >
           <button
             type="button"
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            className="absolute inset-0 bg-black/45 transition-opacity"
             onClick={closeRejectModal}
             aria-label="Close dialog"
           />
           <div className="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl ring-1 ring-red-200/50 dark:ring-red-900/50 bg-white dark:bg-gray-900">
             <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 px-6 py-5 text-white">
               <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15">
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
