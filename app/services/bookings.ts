@@ -2,6 +2,7 @@ import {
   collection, 
   addDoc, 
   updateDoc,
+  deleteDoc,
   doc,
   getDocs,
   query,
@@ -223,5 +224,10 @@ export const updateBookingStatus = async (
       adminNote: deleteField(),
     });
   }
+};
+
+export const deleteBooking = async (bookingId: string): Promise<void> => {
+  const bookingRef = doc(db, 'bookings', bookingId);
+  await deleteDoc(bookingRef);
 };
 

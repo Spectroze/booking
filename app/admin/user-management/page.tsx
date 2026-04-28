@@ -9,6 +9,7 @@ import {
   subscribeToAllUsers,
   updateUserStatus,
   updateUserRole,
+  deleteUser,
   UserData,
   signOut,
 } from '../../services/auth';
@@ -57,6 +58,7 @@ export default function UserManagementPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [roleDraft, setRoleDraft] = useState<Record<string, AppRole>>({});
+  const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
   const router = useRouter();
 
   const displayRole = (u: UserData): AppRole =>
@@ -206,6 +208,30 @@ export default function UserManagementPage() {
   const handleSignOut = async () => {
     await signOut();
     router.push('/');
+  };
+
+  const closeDeleteModal = () => {
+    if (actionLoading === 'delete-user') return;
+    setUserToDelete(null);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    setActionLoading('delete-user');
+    try {
+      await deleteUser(userToDelete.uid);
+      setRoleDraft(d => {
+        const next = { ...d };
+        delete next[userToDelete.uid];
+        return next;
+      });
+      setUserToDelete(null);
+      showToast('User deleted successfully.', 'success');
+    } catch {
+      showToast('Failed to delete user. Please try again.', 'error');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   // Stats
@@ -488,7 +514,7 @@ export default function UserManagementPage() {
                       <th className="text-left py-4 px-6 font-bold text-white text-sm uppercase tracking-wider">Email</th>
                       <th className="text-left py-4 px-6 font-bold text-white text-sm uppercase tracking-wider">Role</th>
                       <th className="text-left py-4 px-6 font-bold text-white text-sm uppercase tracking-wider">Status</th>
-                      <th className="text-center py-4 px-6 font-bold text-white text-sm uppercase tracking-wider">Actions</th>
+                      <th className="text-center py-4 px-6 font-bold text-white text-sm uppercase tracking-wider min-w-[260px]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -497,6 +523,7 @@ export default function UserManagementPage() {
                       const isLoadingApprove = actionLoading === user.uid + 'approved';
                       const isLoadingDecline = actionLoading === user.uid + 'declined';
                       const isLoadingRole = actionLoading === user.uid + 'role';
+                      const isDeletingUser = actionLoading === 'delete-user' && userToDelete?.uid === user.uid;
                       const roleMeta = {
                         email: user.email,
                         displayName: user.displayName,
@@ -578,14 +605,14 @@ export default function UserManagementPage() {
                           <td className="py-4 px-6">
                             {getStatusBadge(status)}
                           </td>
-                          <td className="py-4 px-6">
-                            <div className="flex items-center justify-center gap-2">
+                          <td className="py-4 px-6 min-w-[260px]">
+                            <div className="flex flex-wrap items-center justify-center gap-2">
                               {status !== 'approved' && (
                                 <button
                                   id={`approve-${user.uid}`}
                                   onClick={() => handleStatusUpdate(user.uid, 'approved', roleMeta)}
                                   disabled={!!actionLoading}
-                                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-md hover:shadow-emerald-300/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="inline-flex items-center justify-center gap-1.5 min-w-[92px] px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-md hover:shadow-emerald-300/50 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                                 >
                                   {isLoadingApprove ? (
                                     <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
@@ -605,7 +632,7 @@ export default function UserManagementPage() {
                                   id={`decline-${user.uid}`}
                                   onClick={() => handleStatusUpdate(user.uid, 'declined', roleMeta)}
                                   disabled={!!actionLoading}
-                                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-700 text-white transition-all shadow-md hover:shadow-red-300/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="inline-flex items-center justify-center gap-1.5 min-w-[92px] px-3.5 py-1.5 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-700 text-white transition-all shadow-md hover:shadow-red-300/50 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                                 >
                                   {isLoadingDecline ? (
                                     <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
@@ -624,7 +651,7 @@ export default function UserManagementPage() {
                                 <button
                                   onClick={() => handleStatusUpdate(user.uid, 'pending', roleMeta)}
                                   disabled={!!actionLoading}
-                                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="inline-flex items-center justify-center gap-1.5 min-w-[92px] px-3.5 py-1.5 rounded-lg text-xs font-bold bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                                 >
                                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -632,6 +659,23 @@ export default function UserManagementPage() {
                                   Reset
                                 </button>
                               )}
+                              <button
+                                onClick={() => setUserToDelete(user)}
+                                disabled={!!actionLoading}
+                                className="inline-flex items-center justify-center gap-1.5 min-w-[92px] px-3.5 py-1.5 rounded-lg text-xs font-bold bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/40 dark:hover:bg-red-900/60 dark:text-red-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                              >
+                                {isDeletingUser ? (
+                                  <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                  </svg>
+                                ) : (
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+                                  </svg>
+                                )}
+                                Delete
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -648,6 +692,7 @@ export default function UserManagementPage() {
                   const isLoadingApprove = actionLoading === user.uid + 'approved';
                   const isLoadingDecline = actionLoading === user.uid + 'declined';
                   const isLoadingRole = actionLoading === user.uid + 'role';
+                  const isDeletingUser = actionLoading === 'delete-user' && userToDelete?.uid === user.uid;
                   const roleMeta = {
                     email: user.email,
                     displayName: user.displayName,
@@ -722,6 +767,9 @@ export default function UserManagementPage() {
                             Reset
                           </button>
                         )}
+                        <button onClick={() => setUserToDelete(user)} disabled={!!actionLoading} className="w-full py-2 rounded-lg text-xs font-bold bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/40 dark:text-red-200 transition-all disabled:opacity-50">
+                          {isDeletingUser ? 'Deleting...' : 'Delete'}
+                        </button>
                       </div>
                     </div>
                   );
@@ -745,6 +793,66 @@ export default function UserManagementPage() {
             </>
           )}
         </div>
+
+        {userToDelete && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-user-title"
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+              onClick={closeDeleteModal}
+              aria-label="Close dialog"
+            />
+            <div className="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl ring-1 ring-red-200/50 dark:ring-red-900/50 bg-white dark:bg-gray-900">
+              <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 px-6 py-5 text-white">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 id="delete-user-title" className="text-lg font-bold leading-tight">
+                      Are you sure you want to delete this user?
+                    </h3>
+                    <p className="mt-1 text-sm text-red-100">
+                      This will remove `{userToDelete.displayName || userToDelete.email}` from the user list.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 p-4 text-sm text-red-900 dark:text-red-100">
+                  <p><strong>Name:</strong> {userToDelete.displayName || 'N/A'}</p>
+                  <p><strong>Email:</strong> {userToDelete.email}</p>
+                  <p><strong>Status:</strong> {userToDelete.status || 'pending'}</p>
+                </div>
+                <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={closeDeleteModal}
+                    disabled={actionLoading === 'delete-user'}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteUser}
+                    disabled={actionLoading === 'delete-user'}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 text-white font-semibold shadow-lg shadow-red-500/25 hover:from-red-700 hover:to-rose-700 transition-all disabled:opacity-60"
+                  >
+                    {actionLoading === 'delete-user' ? 'Deleting...' : 'Yes, delete'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

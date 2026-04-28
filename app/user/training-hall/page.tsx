@@ -84,7 +84,27 @@ function TrainingHallContent() {
     return () => unsubscribe();
   }, []);
 
-  // Helper to get booking status for a specific date
+  const getFloatTime = (time: string) => {
+    if (!time) return 0;
+    const [h, m] = time.split(':');
+    return parseInt(h, 10) + parseInt(m, 10) / 60;
+  };
+
+  const getRequestedSlots = (startTime: string, endTime?: string) => {
+    const startFloat = getFloatTime(startTime);
+    const endFloat = endTime ? getFloatTime(endTime) : startFloat;
+
+    return {
+      am: startFloat < 12,
+      // Ending exactly at 12:00 noon remains AM-only, so 8:00-12:00 is half day.
+      pm: startFloat >= 12 || endFloat > 12,
+    };
+  };
+
+  // Helper to get booking status for a specific date.
+  // Half-day rule: 8 AM – 12 PM is considered AM only (half day).
+  // A booking is PM only if it starts at or after 12:00, or ends STRICTLY after 12:00.
+  // Ending exactly at 12:00 noon is still AM (half day), not PM.
   const getDayBookings = (date: Date | null) => {
     if (!date) return { am: false, pm: false, hasBookings: false, bookings: [] };
     
@@ -99,22 +119,9 @@ function TrainingHallContent() {
 
     dayBookings.forEach(b => {
       if (!b.startTime) return;
-
-      const getFloatTime = (time: string) => {
-        if (!time) return 0;
-        const [h, m] = time.split(':');
-        return parseInt(h, 10) + parseInt(m, 10) / 60;
-      };
-
-      const startFloat = getFloatTime(b.startTime);
-      const endFloat = b.endTime ? getFloatTime(b.endTime) : startFloat;
-      
-      if (startFloat < 12) {
-        am = true;
-      }
-      if (startFloat >= 12 || endFloat > 12) {
-        pm = true;
-      }
+      const slots = getRequestedSlots(b.startTime, b.endTime);
+      if (slots.am) am = true;
+      if (slots.pm) pm = true;
     });
 
     return { am, pm, hasBookings: dayBookings.length > 0, bookings: dayBookings };
@@ -157,17 +164,9 @@ function TrainingHallContent() {
         return;
       }
       
-      const getFloatTime = (time: string) => {
-        const [h, m] = time.split(':');
-        return parseInt(h, 10) + parseInt(m, 10) / 60;
-      };
-      
-      const startFloat = getFloatTime(formData.startTime);
-      const endFloat = formData.endTime ? getFloatTime(formData.endTime) : startFloat;
-      
-      const requestsAM = startFloat < 12;
-      // It implies PM if it starts at/after 12, or ends strictly after 12:00
-      const requestsPM = startFloat >= 12 || endFloat > 12;
+      const requestedSlots = getRequestedSlots(formData.startTime, formData.endTime);
+      const requestsAM = requestedSlots.am;
+      const requestsPM = requestedSlots.pm;
 
       if (requestsAM && dayStatus.am) {
         toast.error('The AM slot for this date is already booked. Please select a PM time (12:00 PM onwards).');

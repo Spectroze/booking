@@ -16,6 +16,7 @@ import {
   getDocs,
   updateDoc,
   onSnapshot,
+  deleteDoc,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -186,6 +187,16 @@ export const updateUserRole = async (
     await updateDoc(userRef, { role });
   } catch (error) {
     console.error('Error updating user role:', error);
+    throw error;
+  }
+};
+
+export const deleteUser = async (uid: string): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await deleteDoc(userRef);
+  } catch (error) {
+    console.error('Error deleting user:', error);
     throw error;
   }
 };

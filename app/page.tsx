@@ -24,7 +24,7 @@ export default function Home() {
         toast.error('Email is required. Please use a Google account with an email address.');
         return;
       }
-
+//
       const [userData, userRole] = await Promise.all([
         getUserData(user.uid),
         getUserRole(user.uid),

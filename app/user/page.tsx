@@ -51,6 +51,23 @@ export default function UserPage() {
     return days;
   };
 
+  const getFloatTime = (time: string) => {
+    if (!time) return 0;
+    const [h, m] = time.split(':');
+    return parseInt(h, 10) + parseInt(m, 10) / 60;
+  };
+
+  const getRequestedSlots = (startTime: string, endTime?: string) => {
+    const startFloat = getFloatTime(startTime);
+    const endFloat = endTime ? getFloatTime(endTime) : startFloat;
+
+    return {
+      am: startFloat < 12,
+      // Ending exactly at 12:00 noon remains AM-only, so 8:00-12:00 is half day.
+      pm: startFloat >= 12 || endFloat > 12,
+    };
+  };
+
   const getDayBookings = (date: Date | null, venueType: 'dome-tent' | 'training-hall') => {
     if (!date) return { am: false, pm: false, hasBookings: false };
 
@@ -65,22 +82,9 @@ export default function UserPage() {
 
     dayBookings.forEach(b => {
       if (!b.startTime) return;
-
-      const getFloatTime = (time: string) => {
-        if (!time) return 0;
-        const [h, m] = time.split(':');
-        return parseInt(h, 10) + parseInt(m, 10) / 60;
-      };
-
-      const startFloat = getFloatTime(b.startTime);
-      const endFloat = b.endTime ? getFloatTime(b.endTime) : startFloat;
-
-      if (startFloat < 12) {
-        am = true;
-      }
-      if (startFloat >= 12 || endFloat > 12) {
-        pm = true;
-      }
+      const slots = getRequestedSlots(b.startTime, b.endTime);
+      if (slots.am) am = true;
+      if (slots.pm) pm = true;
     });
 
     return { am, pm, hasBookings: dayBookings.length > 0 };

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Booking, subscribeToBookings, updateBookingStatus } from '../../services/bookings';
+import { Booking, deleteBooking, subscribeToBookings, updateBookingStatus } from '../../services/bookings';
 import { auth, getUserRole, signOut, subscribeToAllUsers } from '../../services/auth';
 import { CountBadge } from '../CountBadge';
 import { useRouter } from 'next/navigation';
@@ -31,6 +31,8 @@ export default function AdminDomeTentPage() {
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [acceptNote, setAcceptNote] = useState('');
   const [acceptSubmitting, setAcceptSubmitting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [pendingUserSignups, setPendingUserSignups] = useState(0);
   const router = useRouter();
 
@@ -151,6 +153,17 @@ export default function AdminDomeTentPage() {
     setRejectError('');
     setShowAcceptModal(false);
     setAcceptNote('');
+    setShowDeleteModal(false);
+  };
+
+  const openDeleteModal = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    if (deleteSubmitting) return;
+    setShowDeleteModal(false);
   };
 
   const openRejectModal = (mode: 'rejectPending' | 'cancelConfirmed') => {
@@ -325,6 +338,31 @@ export default function AdminDomeTentPage() {
   const closeStatusModal = () => {
     setShowStatusModal(false);
     setStatusModalData(null);
+  };
+
+  const handleDeleteBooking = async () => {
+    if (!selectedBooking?.id) return;
+    setDeleteSubmitting(true);
+    try {
+      await deleteBooking(selectedBooking.id);
+      closeModal();
+      setStatusModalData({
+        type: 'success',
+        title: 'Booking Deleted',
+        message: 'The booking has been permanently deleted from history.',
+      });
+      setShowStatusModal(true);
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      setStatusModalData({
+        type: 'error',
+        title: 'Delete Failed',
+        message: 'Failed to delete booking. Please try again.',
+      });
+      setShowStatusModal(true);
+    } finally {
+      setDeleteSubmitting(false);
+    }
   };
 
   const handleSignOut = async () => {
@@ -896,7 +934,7 @@ export default function AdminDomeTentPage() {
             ) : (
               <>
                 {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <div className="hidden xl:block overflow-x-auto rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                   <div className="overflow-hidden rounded-2xl">
                     <table className="w-full">
                       <thead>
@@ -949,7 +987,7 @@ export default function AdminDomeTentPage() {
                               Status
                             </div>
                           </th>
-                          <th className="text-left py-5 px-6 font-extrabold text-white text-sm uppercase tracking-wider">Actions</th>
+                          <th className="text-left py-5 px-6 font-extrabold text-white text-sm uppercase tracking-wider min-w-[110px]">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -1016,17 +1054,30 @@ export default function AdminDomeTentPage() {
                                 {getStatusText(booking.status)}
                               </span>
                             </td>
-                            <td className="py-5 px-6">
-                              <button
-                                onClick={() => openBookingModal(booking)}
-                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                                View
-                              </button>
+                            <td className="py-5 px-6 min-w-[110px]">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => openBookingModal(booking)}
+                                  title="View booking"
+                                  aria-label="View booking"
+                                  className="inline-flex h-10 w-10 items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl transition-all shadow-lg hover:shadow-xl active:scale-95"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => openDeleteModal(booking)}
+                                  title="Delete booking"
+                                  aria-label="Delete booking"
+                                  className="inline-flex h-10 w-10 items-center justify-center bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all shadow-lg hover:shadow-xl"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1036,7 +1087,7 @@ export default function AdminDomeTentPage() {
                 </div>
 
                 {/* Mobile Card View */}
-                <div className="md:hidden space-y-4">
+                <div className="xl:hidden space-y-4">
                   {historyBookings.map((booking) => (
                     <div
                       key={booking.id}
@@ -1081,16 +1132,27 @@ export default function AdminDomeTentPage() {
                           </div>
                         )}
                       </div>
-                      <button
-                        onClick={() => openBookingModal(booking)}
-                        className="mt-4 w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        View Details
-                      </button>
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => openBookingModal(booking)}
+                          className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm font-medium shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          View Details
+                        </button>
+                        <button
+                          onClick={() => openDeleteModal(booking)}
+                          className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all text-sm font-medium shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+                          </svg>
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1363,6 +1425,13 @@ export default function AdminDomeTentPage() {
                 <div className="flex gap-2 sm:gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
                     type="button"
+                    onClick={() => openDeleteModal(selectedBooking)}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm sm:text-base"
+                  >
+                    Delete booking
+                  </button>
+                  <button
+                    type="button"
                     onClick={closeModal}
                     className="flex-1 px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors text-sm sm:text-base"
                   >
@@ -1370,6 +1439,65 @@ export default function AdminDomeTentPage() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && selectedBooking && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-booking-title-dome"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            onClick={closeDeleteModal}
+            aria-label="Close dialog"
+          />
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl shadow-2xl ring-1 ring-red-200/50 dark:ring-red-900/50 bg-white dark:bg-gray-900">
+            <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 px-6 py-5 text-white">
+              <div className="flex items-start gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 id="delete-booking-title-dome" className="text-lg font-bold leading-tight">
+                    Are you sure you want to delete this booking?
+                  </h3>
+                  <p className="mt-1 text-sm text-red-100">
+                    This will permanently remove the history record for `{selectedBooking.eventTitle || selectedBooking.bookingReferenceNo || 'this booking'}`.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 p-4 text-sm text-red-900 dark:text-red-100">
+                <p><strong>Date:</strong> {new Date(selectedBooking.date).toLocaleDateString()}</p>
+                <p><strong>Time:</strong> {formatTime12Hour(selectedBooking.startTime)} - {formatTime12Hour(selectedBooking.endTime)}</p>
+              </div>
+              <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={closeDeleteModal}
+                  disabled={deleteSubmitting}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteBooking}
+                  disabled={deleteSubmitting}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 text-white font-semibold shadow-lg shadow-red-500/25 hover:from-red-700 hover:to-rose-700 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {deleteSubmitting ? 'Deleting...' : 'Yes, delete'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

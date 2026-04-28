@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
           </div>
           <p>If you have any questions, please contact the administrator.</p>
         `;
+        
       } else if (status === 'declined') {
         subject = '❌ Your Account Access Request';
         headerColor = '#ef4444';
