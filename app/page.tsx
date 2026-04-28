@@ -1,9 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import {
+  auth,
+  getDefaultRouteForRole,
   signInWithGoogle,
+  getSafeUserRole,
   getUserRole,
   getUserData,
   signOut,
@@ -14,6 +17,35 @@ import { toast } from 'react-toastify';
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (!user) return;
+
+      try {
+        const [userData, userRole] = await Promise.all([
+          getUserData(user.uid),
+          getUserRole(user.uid),
+        ]);
+
+        const role = getSafeUserRole(userRole);
+        const isAdminRole = role !== 'user';
+        const status = userData?.status || 'pending';
+
+        if (!isAdminRole && status !== 'approved') {
+          await signOut();
+          return;
+        }
+
+        router.replace(getDefaultRouteForRole(role));
+      } catch (error) {
+        console.error('Home auth redirect error:', error);
+        await signOut();
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -57,15 +89,7 @@ export default function Home() {
       }
 
       // Redirect based on role
-      if (userRole === 'admin-training') {
-        router.push('/admin');
-      } else if (userRole === 'admin-dome') {
-        router.push('/admin/admin-dome-tent');
-      } else if (userRole === 'admin') {
-        router.push('/admin/select-dashboard');
-      } else {
-        router.push('/user');
-      }
+      router.push(getDefaultRouteForRole(getSafeUserRole(userRole)));
     } catch (error: any) {
       console.error('Sign in error:', error);
       if (error?.code === 'auth/popup-closed-by-user') {

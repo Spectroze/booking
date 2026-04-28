@@ -3,8 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  auth,
-  getUserRole,
   getAllUsers,
   subscribeToAllUsers,
   updateUserStatus,
@@ -14,6 +12,7 @@ import {
   signOut,
 } from '../../services/auth';
 import { CountBadge } from '../CountBadge';
+import { useRouteGuard } from '../../hooks/useRouteGuard';
 
 type AppRole = 'user' | 'admin' | 'admin-training' | 'admin-dome';
 
@@ -60,6 +59,9 @@ export default function UserManagementPage() {
   const [roleDraft, setRoleDraft] = useState<Record<string, AppRole>>({});
   const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
   const router = useRouter();
+  const { isCheckingAccess, isAuthorized } = useRouteGuard({
+    allowRoles: ['admin', 'admin-training', 'admin-dome'],
+  });
 
   const displayRole = (u: UserData): AppRole =>
     roleDraft[u.uid] ?? ((u.role || 'user') as AppRole);
@@ -74,34 +76,16 @@ export default function UserManagementPage() {
     });
   }, []);
 
-  // Auth guard + real-time user list
+  // Real-time user list
   useEffect(() => {
-    let unsubUsers: (() => void) | undefined;
-    const unsubAuth = auth.onAuthStateChanged(async (user) => {
-      if (unsubUsers) {
-        unsubUsers();
-        unsubUsers = undefined;
-      }
-      if (!user) {
-        router.push('/');
-        return;
-      }
-      const role = await getUserRole(user.uid);
-      if (role !== 'admin' && role !== 'admin-training' && role !== 'admin-dome') {
-        router.push('/');
-        return;
-      }
-      setLoading(true);
-      unsubUsers = subscribeToAllUsers(allUsers => {
-        setUsers(sortUsersList(allUsers));
-        setLoading(false);
-      });
+    if (!isAuthorized) return;
+    setLoading(true);
+    const unsubscribe = subscribeToAllUsers(allUsers => {
+      setUsers(sortUsersList(allUsers));
+      setLoading(false);
     });
-    return () => {
-      unsubAuth();
-      unsubUsers?.();
-    };
-  }, [router, sortUsersList]);
+    return () => unsubscribe();
+  }, [isAuthorized, sortUsersList]);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -287,6 +271,19 @@ export default function UserManagementPage() {
     const idx = email.charCodeAt(0) % colors.length;
     return colors[idx];
   };
+
+  if (isCheckingAccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Checking access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 p-2 sm:p-4 md:p-8">

@@ -1,51 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { auth, getUserRole, signOut } from '../../services/auth';
+import { useState } from 'react';
+import { signOut } from '../../services/auth';
 import { useRouter } from 'next/navigation';
+import { useRouteGuard } from '../../hooks/useRouteGuard';
 
 export default function SelectDashboardPage() {
-  const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const router = useRouter();
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const unsubscribe = auth.onAuthStateChanged(async (user) => {
-          if (!user) {
-            router.push('/');
-            return;
-          }
-
-          // Get user role
-          const role = await getUserRole(user.uid);
-          setUserRole(role);
-
-          // If not admin, redirect
-          if (role !== 'admin') {
-            if (role === 'admin-training') {
-              router.push('/admin');
-            } else if (role === 'admin-dome') {
-              router.push('/admin/admin-dome-tent');
-            } else {
-              router.push('/user');
-            }
-            return;
-          }
-
-          setLoading(false);
-        });
-
-        return () => unsubscribe();
-      } catch (error) {
-        console.error('Error checking auth:', error);
-        router.push('/');
-      }
-    };
-
-    checkAuth();
-  }, [router]);
+  const { isCheckingAccess, isAuthorized } = useRouteGuard({
+    allowRoles: ['admin'],
+  });
 
   const handleSelectDashboard = (dashboard: 'training' | 'dome') => {
     if (dashboard === 'training') {
@@ -64,16 +28,18 @@ export default function SelectDashboardPage() {
     }
   };
 
-  if (loading) {
+  if (isCheckingAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Checking access...</p>
         </div>
       </div>
     );
   }
+
+  if (!isAuthorized) return null;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 p-4">

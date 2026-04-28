@@ -34,6 +34,8 @@ export interface UserData {
   lastLogin?: any;
 }
 
+export type AppRole = 'user' | 'admin' | 'admin-training' | 'admin-dome';
+
 export const signInWithGoogle = async (): Promise<User> => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
@@ -147,6 +149,26 @@ export const getAllUsers = async (): Promise<UserData[]> => {
   } catch (error) {
     console.error('Error getting all users:', error);
     return [];
+  }
+};
+
+export const getSafeUserRole = (role?: string | null): AppRole => {
+  if (role === 'admin' || role === 'admin-training' || role === 'admin-dome') {
+    return role;
+  }
+  return 'user';
+};
+
+export const getDefaultRouteForRole = (role: AppRole): string => {
+  switch (role) {
+    case 'admin-training':
+      return '/admin';
+    case 'admin-dome':
+      return '/admin/admin-dome-tent';
+    case 'admin':
+      return '/admin/select-dashboard';
+    default:
+      return '/user';
   }
 };
 

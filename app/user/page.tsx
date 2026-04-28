@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '../services/auth';
+import { signOut } from '../services/auth';
 import { subscribeToBookings, type Booking } from '../services/bookings';
 import { toast } from 'react-toastify';
+import { useRouteGuard } from '../hooks/useRouteGuard';
 
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
@@ -15,27 +16,45 @@ export default function UserPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [domeTentCalendarMonth, setDomeTentCalendarMonth] = useState(new Date());
   const [trainingHallCalendarMonth, setTrainingHallCalendarMonth] = useState(new Date());
+  const { isCheckingAccess, isAuthorized } = useRouteGuard({
+    allowRoles: ['user'],
+    requireApproved: true,
+  });
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  // Check authentication
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user) {
-        router.push('/');
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.push('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast.error('Failed to sign out. Please try again.');
+    }
+  };
 
   // Subscribe to bookings for calendar previews
   useEffect(() => {
+    if (!isAuthorized) return;
     const unsubscribe = subscribeToBookings((bookingsList) => {
       setBookings(bookingsList);
     });
     return () => unsubscribe();
-  }, []);
+  }, [isAuthorized]);
+
+  if (isCheckingAccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Checking access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
 
   // Calendar helpers
   const getDaysInMonth = (date: Date): (Date | null)[] => {
@@ -239,13 +258,25 @@ export default function UserPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            Book a Venue
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Choose the venue you'd like to book
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+          <div className="text-center sm:text-left">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+              Book a Venue
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Choose the venue you'd like to book
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="self-center sm:self-start inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium shadow-lg transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Sign Out
+          </button>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">

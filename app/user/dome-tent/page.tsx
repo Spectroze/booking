@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { auth } from '../../services/auth';
 import { createBooking, subscribeToBookings, type Booking } from '../../services/bookings';
 import { toast } from 'react-toastify';
+import { useRouteGuard } from '../../hooks/useRouteGuard';
 
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
@@ -44,24 +45,19 @@ function DomeTentContent() {
 
   // Bookings state for validation
   const [bookings, setBookings] = useState<Booking[]>([]);
-
-  // Check authentication
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user) {
-        router.push('/');
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
+  const { isCheckingAccess, isAuthorized } = useRouteGuard({
+    allowRoles: ['user'],
+    requireApproved: true,
+  });
 
   // Subscribe to dome-tent bookings for validation
   useEffect(() => {
+    if (!isAuthorized) return;
     const unsubscribe = subscribeToBookings((bookingsList) => {
       setBookings(bookingsList.filter((b) => b.type === 'dome-tent'));
     });
     return () => unsubscribe();
-  }, []);
+  }, [isAuthorized]);
 
   const getFloatTime = (time: string) => {
     if (!time) return 0;
@@ -275,6 +271,19 @@ function DomeTentContent() {
       setTimeout(() => setLoading(false), 500); // Give it a short moment after completion
     }
   };
+
+  if (isCheckingAccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Checking access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4">

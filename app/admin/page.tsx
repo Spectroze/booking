@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { Booking, deleteBooking, subscribeToBookings, updateBookingStatus } from '../services/bookings';
-import { auth, getUserRole, signOut, subscribeToAllUsers } from '../services/auth';
+import { auth, signOut, subscribeToAllUsers } from '../services/auth';
 import { CountBadge } from './CountBadge';
 import { useRouter } from 'next/navigation';
+import { useRouteGuard } from '../hooks/useRouteGuard';
 
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
@@ -35,53 +36,32 @@ export default function AdminPage() {
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [pendingUserSignups, setPendingUserSignups] = useState(0);
   const router = useRouter();
+  const { isCheckingAccess, isAuthorized } = useRouteGuard({
+    allowRoles: ['admin-training', 'admin'],
+  });
 
   // Filter bookings by type - only training-hall
   const filteredBookings = bookings.filter(booking => booking.type === 'training-hall');
 
-  // Check authentication and role + real-time pending user signups (Users badge)
+  // Real-time pending user signups (Users badge)
   useEffect(() => {
-    let unsubUsers: (() => void) | undefined;
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (unsubUsers) {
-        unsubUsers();
-        unsubUsers = undefined;
-      }
-      if (!user) {
-        setPendingUserSignups(0);
-        router.push('/');
-        return;
-      }
-
-      const role = await getUserRole(user.uid);
-      if (role !== 'admin-training' && role !== 'admin') {
-        if (role === 'admin-dome') {
-          router.push('/admin/admin-dome-tent');
-        } else {
-          router.push('/');
-        }
-        return;
-      }
-
-      unsubUsers = subscribeToAllUsers(all =>
-        setPendingUserSignups(
-          all.filter(u => !u.status || u.status === 'pending').length
-        )
-      );
-    });
-    return () => {
-      unsubscribe();
-      unsubUsers?.();
-    };
-  }, [router]);
+    if (!isAuthorized) return;
+    const unsubscribe = subscribeToAllUsers(all =>
+      setPendingUserSignups(
+        all.filter(u => !u.status || u.status === 'pending').length
+      )
+    );
+    return () => unsubscribe();
+  }, [isAuthorized]);
 
   // Subscribe to real-time bookings
   useEffect(() => {
+    if (!isAuthorized) return;
     const unsubscribe = subscribeToBookings((bookingsList) => {
       setBookings(bookingsList);
     });
     return () => unsubscribe();
-  }, []);
+  }, [isAuthorized]);
 
   // Calendar helpers
   const getDaysInMonth = (date: Date) => {
@@ -431,109 +411,140 @@ export default function AdminPage() {
   const confirmedCount = filteredBookings.filter(b => b.status === 'confirmed').length;
   const cancelledCount = filteredBookings.filter(b => b.status === 'cancelled').length;
 
+  if (isCheckingAccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Checking access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 p-2 sm:p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header with Gradient */}
         <div className="mb-6 sm:mb-8">
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 rounded-2xl shadow-xl p-6 sm:p-8 mb-6">
-            <div className="flex items-center justify-between gap-6">
-              {/* Title + subtitle — left */}
-              <div className="min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 flex items-center gap-3 truncate">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div>
+                <button
+                  type="button"
+                  onClick={() => router.push('/admin/select-dashboard')}
+                  className="inline-flex items-center gap-2 text-blue-100 hover:text-white hover:bg-white/10 rounded-lg px-3 py-2 transition-colors mb-3"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Back to Dashboard Selection
+                </button>
+                <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center gap-3">
                   {viewMode === 'calendar' && (
-                    <svg className="w-7 h-7 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   )}
                   {viewMode === 'booked' && (
-                    <svg className="w-7 h-7 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   )}
                   {viewMode === 'history' && (
-                    <svg className="w-7 h-7 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   )}
                   {viewMode === 'calendar' ? 'Training Hall Booking Calendar' : viewMode === 'booked' ? 'Training Hall Booked Calendar' : 'Training Hall Booking History'}
                 </h1>
                 {viewMode === 'calendar' && (
-                  <p className="text-blue-100 text-sm">
+                  <p className="text-blue-100 text-sm sm:text-base mt-1">
                     {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()} - Pending Training Hall Appointments
                   </p>
                 )}
                 {viewMode === 'booked' && (
-                  <p className="text-blue-100 text-sm">
+                  <p className="text-blue-100 text-sm sm:text-base mt-1">
                     All confirmed training hall bookings and accepted appointments
                   </p>
                 )}
                 {viewMode === 'history' && (
-                  <p className="text-blue-100 text-sm">
+                  <p className="text-blue-100 text-sm sm:text-base mt-1">
                     All accepted and rejected training hall bookings
                   </p>
                 )}
               </div>
-              {/* Nav buttons — single straight line on the right */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => setViewMode('calendar')}
-                  className={`relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all shadow-md whitespace-nowrap ${
+                  className={`relative px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg ${
                     viewMode === 'calendar'
-                      ? 'bg-white text-blue-600'
+                      ? 'bg-white text-blue-600 hover:bg-blue-50 transform hover:scale-105'
                       : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
                   }`}
                 >
-                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Calendar
+                  <span className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Calendar
+                  </span>
                   <CountBadge count={pendingCount} />
                 </button>
                 <button
                   onClick={() => setViewMode('booked')}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all shadow-md whitespace-nowrap ${
+                  className={`px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg ${
                     viewMode === 'booked'
-                      ? 'bg-white text-blue-600'
+                      ? 'bg-white text-green-600 hover:bg-green-50 transform hover:scale-105'
                       : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
                   }`}
                 >
-                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Booked
+                  <span className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Booked
+                  </span>
                 </button>
                 <button
                   onClick={() => setViewMode('history')}
-                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all shadow-md whitespace-nowrap ${
+                  className={`px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg ${
                     viewMode === 'history'
-                      ? 'bg-white text-blue-600'
+                      ? 'bg-white text-blue-600 hover:bg-blue-50 transform hover:scale-105'
                       : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
                   }`}
                 >
-                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  History
+                  <span className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    History
+                  </span>
                 </button>
                 <button
                   onClick={() => router.push('/admin/user-management')}
-                  className="relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all shadow-md whitespace-nowrap bg-violet-500 hover:bg-violet-400 text-white"
+                  className="relative px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-violet-500 hover:bg-violet-400 text-white"
                 >
-                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Users
+                  <span className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Users
+                  </span>
                   <CountBadge count={pendingUserSignups} />
                 </button>
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all shadow-md whitespace-nowrap bg-red-600 hover:bg-red-700 text-white"
+                  className="px-4 sm:px-5 py-2.5 text-sm sm:text-base rounded-xl transition-all font-medium shadow-lg bg-red-600 hover:bg-red-700 text-white"
                 >
-                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  Sign Out
+                  <span className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Sign Out
+                  </span>
                 </button>
               </div>
             </div>

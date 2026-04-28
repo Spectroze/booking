@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { Booking, deleteBooking, subscribeToBookings, updateBookingStatus } from '../../services/bookings';
-import { auth, getUserRole, signOut, subscribeToAllUsers } from '../../services/auth';
+import { auth, signOut, subscribeToAllUsers } from '../../services/auth';
 import { CountBadge } from '../CountBadge';
 import { useRouter } from 'next/navigation';
+import { useRouteGuard } from '../../hooks/useRouteGuard';
 
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
@@ -35,53 +36,32 @@ export default function AdminDomeTentPage() {
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [pendingUserSignups, setPendingUserSignups] = useState(0);
   const router = useRouter();
+  const { isCheckingAccess, isAuthorized } = useRouteGuard({
+    allowRoles: ['admin-dome', 'admin'],
+  });
 
   // Filter bookings by type - only dome-tent
   const filteredBookings = bookings.filter(booking => booking.type === 'dome-tent');
 
-  // Check authentication and role + real-time pending user signups (Users badge)
+  // Real-time pending user signups (Users badge)
   useEffect(() => {
-    let unsubUsers: (() => void) | undefined;
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (unsubUsers) {
-        unsubUsers();
-        unsubUsers = undefined;
-      }
-      if (!user) {
-        setPendingUserSignups(0);
-        router.push('/');
-        return;
-      }
-
-      const role = await getUserRole(user.uid);
-      if (role !== 'admin-dome' && role !== 'admin') {
-        if (role === 'admin-training') {
-          router.push('/admin');
-        } else {
-          router.push('/');
-        }
-        return;
-      }
-
-      unsubUsers = subscribeToAllUsers(all =>
-        setPendingUserSignups(
-          all.filter(u => !u.status || u.status === 'pending').length
-        )
-      );
-    });
-    return () => {
-      unsubscribe();
-      unsubUsers?.();
-    };
-  }, [router]);
+    if (!isAuthorized) return;
+    const unsubscribe = subscribeToAllUsers(all =>
+      setPendingUserSignups(
+        all.filter(u => !u.status || u.status === 'pending').length
+      )
+    );
+    return () => unsubscribe();
+  }, [isAuthorized]);
 
   // Subscribe to real-time bookings
   useEffect(() => {
+    if (!isAuthorized) return;
     const unsubscribe = subscribeToBookings((bookingsList) => {
       setBookings(bookingsList);
     });
     return () => unsubscribe();
-  }, []);
+  }, [isAuthorized]);
 
   // Calendar helpers
   const getDaysInMonth = (date: Date) => {
@@ -431,6 +411,19 @@ export default function AdminDomeTentPage() {
   const confirmedCount = filteredBookings.filter(b => b.status === 'confirmed').length;
   const cancelledCount = filteredBookings.filter(b => b.status === 'cancelled').length;
 
+  if (isCheckingAccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Checking access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 p-2 sm:p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -439,6 +432,16 @@ export default function AdminDomeTentPage() {
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 rounded-2xl shadow-xl p-6 sm:p-8 mb-6">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div>
+                <button
+                  type="button"
+                  onClick={() => router.push('/admin/select-dashboard')}
+                  className="inline-flex items-center gap-2 text-blue-100 hover:text-white hover:bg-white/10 rounded-lg px-3 py-2 transition-colors mb-3"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Back to Dashboard Selection
+                </button>
                 <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 flex items-center gap-3">
                   {viewMode === 'calendar' && (
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
