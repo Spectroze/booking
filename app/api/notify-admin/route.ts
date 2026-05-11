@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { booking } = body;
 
-    console.log('Admin notification API called with booking:', booking);
+    // Booking received — not logged to avoid exposing sensitive data
 
     if (!booking) {
       console.error('Missing booking data');
@@ -51,11 +51,11 @@ export async function POST(request: NextRequest) {
     // Get admin emails - prioritize environment variable (most reliable for deployment)
     let adminEmails: string[] = getAdminEmails();
     
-    console.log(`Found ${adminEmails.length} admin email(s) from environment variable`);
+    // Admin emails loaded from env var
     
     // If no admin emails from env, try to get from Firestore (may not work in serverless environment)
     if (adminEmails.length === 0) {
-      console.log('No ADMIN_EMAILS env var found, attempting to fetch from Firestore...');
+      // Falling back to Firestore for admin emails
       try {
         // Try using client SDK - this may not work in serverless/edge environments
         const { collection, getDocs } = await import('firebase/firestore');
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
           }
         });
         
-        console.log(`Found ${adminEmails.length} admin email(s) from Firestore`);
+        // Admin emails loaded from Firestore
       } catch (firestoreError: any) {
         console.error('Error fetching admins from Firestore:', firestoreError);
         // If Firestore access fails, provide helpful error message
@@ -93,10 +93,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`Found ${adminEmails.length} admin(s) to notify:`, adminEmails);
+    // Sending notifications to admins
 
     if (adminEmails.length === 0) {
-      console.warn('No admin emails found - neither from env var nor Firestore');
+      // No admin emails configured
       return NextResponse.json(
         { 
           error: 'No admin emails found. Please set ADMIN_EMAILS environment variable in your deployment platform.',
@@ -268,9 +268,7 @@ This is an automated notification email.
           html: htmlContent,
         };
 
-        console.log(`Sending email to admin: ${email}`);
         const result = await transporter.sendMail(mailOptions);
-        console.log(`Email sent successfully to ${email}:`, result.messageId);
         return { success: true, email, messageId: result.messageId };
       } catch (emailError: any) {
         console.error(`Failed to send email to ${email}:`, emailError);
@@ -282,7 +280,7 @@ This is an automated notification email.
     const successful = results.filter(r => r.success).length;
     const failed = results.filter(r => !r.success).length;
 
-    console.log(`Email sending complete: ${successful} successful, ${failed} failed`);
+    // Email sending complete
 
     return NextResponse.json(
       { 

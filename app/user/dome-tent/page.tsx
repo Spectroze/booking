@@ -35,6 +35,7 @@ function DomeTentContent() {
     // Equipment and Services
     lectern: false,
     tables: false,
+    tablesQuantity: '',
     flagStand: false,
     chairs: false,
     chairsQuantity: '',
@@ -188,6 +189,7 @@ function DomeTentContent() {
         equipmentNeeded: {
           lectern: formData.lectern,
           tables: formData.tables,
+          tablesQuantity: formData.tablesQuantity ? parseInt(formData.tablesQuantity) : undefined,
           flagStand: formData.flagStand,
           chairs: formData.chairs,
           chairsQuantity: formData.chairsQuantity ? parseInt(formData.chairsQuantity) : undefined,
@@ -216,42 +218,21 @@ function DomeTentContent() {
             booking: bookingForApi,
           }),
         });
-
         if (!response.ok) {
-          // Try to get error message from response
-          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          // Try to get error message from response — swallowed silently to avoid leaking data
           try {
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-              const errorData = await response.json();
-              if (errorData.error) {
-                errorMessage = errorData.error;
-              } else if (errorData.message) {
-                errorMessage = errorData.message;
-              } else if (Object.keys(errorData).length > 0) {
-                errorMessage = JSON.stringify(errorData);
-              }
-            } else {
-              const text = await response.text();
-              if (text) {
-                errorMessage = text;
-              }
-            }
-          } catch (parseError) {
-            // If parsing fails, use default error message
-            console.warn('Could not parse error response:', parseError);
+            await response.json();
+          } catch {
+            // ignore parse error
           }
-          console.warn('Admin notification failed:', errorMessage);
         } else {
           try {
-            const result = await response.json();
-            console.log('Admin notification sent:', result);
-          } catch (parseError) {
-            console.warn('Admin notification may have succeeded but could not parse response');
+            await response.json();
+          } catch {
+            // ignore parse error
           }
         }
-      } catch (notifyError: any) {
-        console.warn('Error notifying admins:', notifyError?.message || notifyError);
+      } catch {
         // Don't fail the booking if notification fails
       }
 
@@ -531,17 +512,30 @@ function DomeTentContent() {
                   </label>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <input
                     type="checkbox"
                     id="tables"
                     checked={formData.tables}
-                    onChange={(e) => setFormData({ ...formData, tables: e.target.checked })}
+                    onChange={(e) => setFormData({ ...formData, tables: e.target.checked, tablesQuantity: e.target.checked ? formData.tablesQuantity : '' })}
                     className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
                   <label htmlFor="tables" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Tables
                   </label>
+                  {formData.tables && (
+                    <span className="text-sm text-gray-600 dark:text-gray-400">(qtty)</span>
+                  )}
+                  {formData.tables && (
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.tablesQuantity}
+                      onChange={(e) => setFormData({ ...formData, tablesQuantity: e.target.value })}
+                      placeholder="Quantity"
+                      className="w-24 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  )}
                 </div>
 
                 <div className="flex items-center gap-3">

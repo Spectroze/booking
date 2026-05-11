@@ -251,40 +251,12 @@ function TrainingHallContent() {
         });
 
         if (!response.ok) {
-          // Try to get error message from response
-          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-          try {
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-              const errorData = await response.json();
-              if (errorData.error) {
-                errorMessage = errorData.error;
-              } else if (errorData.message) {
-                errorMessage = errorData.message;
-              } else if (Object.keys(errorData).length > 0) {
-                errorMessage = JSON.stringify(errorData);
-              }
-            } else {
-              const text = await response.text();
-              if (text) {
-                errorMessage = text;
-              }
-            }
-          } catch (parseError) {
-            // If parsing fails, use default error message
-            console.warn('Could not parse error response:', parseError);
-          }
-          console.warn('Admin notification failed:', errorMessage);
+          // Response consumed silently to avoid leaking data to browser console
+          try { await response.json(); } catch { /* ignore */ }
         } else {
-          try {
-            const result = await response.json();
-            console.log('Admin notification sent:', result);
-          } catch (parseError) {
-            console.warn('Admin notification may have succeeded but could not parse response');
-          }
+          try { await response.json(); } catch { /* ignore */ }
         }
-      } catch (notifyError: any) {
-        console.warn('Error notifying admins:', notifyError?.message || notifyError);
+      } catch {
         // Don't fail the booking if notification fails
       }
 
