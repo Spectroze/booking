@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1e3a5f" />
+    <title>Offline – GSO Booking</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #e2e8f0;
+        padding: 1.5rem;
+      }
+
+      .container {
+        text-align: center;
+        max-width: 420px;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1.5rem;
+        padding: 3rem 2rem;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        animation: fadeIn 0.5s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      .icon-wrapper {
+        width: 96px;
+        height: 96px;
+        margin: 0 auto 1.5rem;
+        background: rgba(30, 58, 95, 0.6);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid rgba(99, 179, 237, 0.3);
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(99, 179, 237, 0.3); }
+        50%       { box-shadow: 0 0 0 12px rgba(99, 179, 237, 0); }
+      }
+
+      .icon-wrapper svg {
+        width: 48px;
+        height: 48px;
+        stroke: #63b3ed;
+        fill: none;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #f1f5f9;
+        margin-bottom: 0.75rem;
+        letter-spacing: -0.02em;
+      }
+
+      p {
+        font-size: 1rem;
+        color: #94a3b8;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+      }
+
+      .tips {
+        background: rgba(99, 179, 237, 0.08);
+        border: 1px solid rgba(99, 179, 237, 0.2);
+        border-radius: 0.75rem;
+        padding: 1rem 1.25rem;
+        text-align: left;
+        margin-bottom: 1.5rem;
+      }
+
+      .tips p {
+        font-size: 0.8rem;
+        color: #7dd3fc;
+        margin-bottom: 0;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+      }
+
+      .tips ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .tips li {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        padding: 0.2rem 0;
+        padding-left: 1rem;
+        position: relative;
+      }
+
+      .tips li::before {
+        content: '›';
+        position: absolute;
+        left: 0;
+        color: #63b3ed;
+      }
+
+      button {
+        width: 100%;
+        padding: 0.875rem 1.5rem;
+        background: linear-gradient(135deg, #1d4ed8, #1e3a5f);
+        color: #fff;
+        border: none;
+        border-radius: 0.75rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s, transform 0.1s;
+        letter-spacing: 0.01em;
+      }
+
+      button:hover { opacity: 0.9; }
+      button:active { transform: scale(0.98); }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="icon-wrapper">
+        <!-- WiFi-off icon -->
+        <svg viewBox="0 0 24 24">
+          <line x1="1" y1="1" x2="23" y2="23"></line>
+          <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+          <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+          <path d="M10.71 5.05A16 16 0 0 1 22.56 9"></path>
+          <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+          <circle cx="12" cy="20" r="1" fill="#63b3ed" stroke="none"></circle>
+        </svg>
+      </div>
+
+      <h1>You're Offline</h1>
+      <p>
+        It looks like you've lost your internet connection. Please check your network and try again.
+      </p>
+
+      <div class="tips">
+        <p>Try these steps:</p>
+        <ul>
+          <li>Check your Wi-Fi or mobile data connection</li>
+          <li>Toggle Airplane mode off and on</li>
+          <li>Move closer to your router</li>
+        </ul>
+      </div>
+
+      <button onclick="window.location.reload()">
+        Try Again
+      </button>
+    </div>
+  </body>
+</html>
